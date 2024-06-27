@@ -1,0 +1,10 @@
+openai
+streamlit
+streamlit_chat
+numpy_financial
+numpy
+pandas
+plotly.graph_objects 
+matplotlib.pyplot
+io
+openpyxl
