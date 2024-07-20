@@ -1,6 +1,6 @@
 openai
 numpy_financial
 numpy
-plotly.graph_objects 
-matplotlib.pyplot
+plotly
+matplotlib
 openpyxl
