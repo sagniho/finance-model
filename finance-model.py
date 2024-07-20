@@ -3,73 +3,33 @@ import numpy as np
 import numpy_financial as npf
 import pandas as pd
 import plotly.graph_objects as go
+import io
+from openpyxl import Workbook
+from openpyxl.chart import LineChart, Reference
+from openpyxl.styles import Font, Alignment, Border, Side
+import streamlit as st
+import numpy as np
+import numpy_financial as npf
+import pandas as pd
+import plotly.graph_objects as go
 from openai import OpenAI
 import io
 from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.styles import Font, Alignment, Border, Side
+from datetime import datetime
+
 
 ASSISTANT_ID = st.secrets["NY_ADVISOR"],
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Initialize session state
-if 'thread' not in st.session_state:
-    st.session_state['thread'] = client.beta.threads.create().id
-if 'messages' not in st.session_state:
-    st.session_state['messages'] = []
 if 'project_data' not in st.session_state:
     st.session_state['project_data'] = {}
 if 'calculated_results' not in st.session_state:
     st.session_state['calculated_results'] = None
 
-def send_message_get_response(assistant_id, user_message):
-    thread_id = st.session_state['thread']
-    message = client.beta.threads.messages.create(
-        thread_id=thread_id, role="user", content=user_message
-    )
-    run = client.beta.threads.runs.create(
-        thread_id=thread_id,
-        assistant_id=assistant_id
-    )
-    while True:
-        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        if run.status == "completed":
-            messages = client.beta.threads.messages.list(thread_id=thread_id)
-            latest_message = messages.data[0]
-            text = latest_message.content[0].text.value
-            return text
-
-def get_gpt4_analysis(project_data, calculated_results):
-    prompt = f"""
-    Act as a financial analyst specializing in solar energy projects. Given the following project data and calculated results for a solar PPA (Power Purchase Agreement) C&I (rooftop or ground) project in NY, provide a brief analysis and suggestions. Keep in mind that this is C&I project and not a CSG:
-
-    Project Data:
-    - Project Capacity: {project_data['capacity']} MW
-    - Capital Expenditure: ${project_data['capex']:,}
-    - Annual Operational Expenditure: ${project_data['opex']:,}
-    - Project Lifespan: {project_data['lifespan']} years
-    - Annual Degradation Rate: {project_data['degradation_rate']*100}%
-    - Annual Generation: {project_data['annual_generation']:,} kWh
-    - Target IRR: {project_data['target_irr']}%
-    - Inverter Replacement Cost: ${project_data['inverter_cost']:,}
-    - Inverter Lifetime: {project_data['inverter_lifetime']} years
-    - Incentives: ${project_data['incentives']:,}
-
-    Calculated Results:
-    - Required PPA Price: ${calculated_results['ppa_price']:.4f} per kWh
-    - Total Generation: {calculated_results['total_generation']:.2f} GWh
-    - Total Revenue: ${calculated_results['total_revenue']:,.2f}
-    - Total OpEx: ${calculated_results['total_opex']:,.2f}
-    - Net Profit: ${calculated_results['net_profit']:,.2f}
-
-    Highlight any incentives applicable and analyze to optimize revenue from a regulatory perspective using your database.
-
-    Limit your response to 250 words.
-    """
-    return send_message_get_response(ASSISTANT_ID, prompt)
-
 def calculate_ppa_price(project_data):
-    # Extract data from project_data
     capacity = project_data['capacity']
     capex = project_data['capex']
     opex = project_data['opex']
@@ -80,18 +40,26 @@ def calculate_ppa_price(project_data):
     inverter_cost = project_data['inverter_cost']
     inverter_lifetime = project_data['inverter_lifetime']
     incentives = project_data['incentives']
+    inflation_rate = project_data['inflation_rate']
+    incentive_payback_period = project_data['incentive_payback_period']
+
+    # Calculate total incentives
+    itc_amount = capex * (incentives['itc_rate'] + incentives['additional_itc'])
+    ny_incentives = calculate_ny_incentives(project_data) if incentives['ny_selected'] else 0
+    total_incentives = itc_amount + ny_incentives
 
     def npv_function(ppa_price):
         cash_flows = []
         for year in range(lifespan):
             year_generation = annual_generation * (1 - degradation_rate) ** year
             revenue = year_generation * ppa_price
-            annual_cash_flow = revenue - opex
-            if year == 0:
-                annual_cash_flow += incentives
-            if (year + 1) % inverter_lifetime == 0 and year + 1 != lifespan:
-                annual_cash_flow -= inverter_cost
-            cash_flows.append(annual_cash_flow)
+            annual_opex = opex * (1 + inflation_rate) ** year
+            inverter_replacement = inverter_cost if (year + 1) % inverter_lifetime == 0 and year + 1 != lifespan else 0
+            
+            annual_incentive = total_incentives / incentive_payback_period if year < incentive_payback_period else 0
+            
+            cash_flow = revenue - annual_opex - inverter_replacement + annual_incentive
+            cash_flows.append(cash_flow)
         
         cash_flows.insert(0, -capex)
         
@@ -107,6 +75,75 @@ def calculate_ppa_price(project_data):
     
     return (low + high) / 2
 
+
+def calculate_ny_incentives(project_data):
+    capacity = project_data['capacity']
+    incentives = project_data['incentives']
+    
+    total_incentive = 0
+    
+    if incentives['ny_selected']:
+        # ICSA
+        if incentives['icsa_eligible']:
+            if incentives['project_location'] == 'Upstate':
+                total_incentive += capacity * 1000 * incentives['icsa_rate_upstate']
+            else:  # Con Edison
+                total_incentive += capacity * 1000 * incentives['icsa_rate_con_ed']
+        
+        # Landfill/Brownfield Adder
+        if incentives['brownfield_eligible']:
+            total_incentive += capacity * 1000 * 0.15
+        
+        # Prevailing Wage Adder
+        if incentives['prevailing_wage_eligible']:
+            if incentives['project_location'] == 'Upstate':
+                total_incentive += capacity * 1000 * 0.125
+            else:  # Con Edison
+                total_incentive += capacity * 1000 * 0.20
+        
+        # NYSERDA Community Adder
+        if incentives['nyserda_community_eligible']:
+            total_incentive += capacity * 1000 * 0.07
+    
+    return total_incentive
+
+
+def calculate_irr(project_data, ppa_price):
+    capacity = project_data['capacity']
+    capex = project_data['capex']
+    opex = project_data['opex']
+    lifespan = project_data['lifespan']
+    degradation_rate = project_data['degradation_rate']
+    annual_generation = project_data['annual_generation']
+    inverter_cost = project_data['inverter_cost']
+    inverter_lifetime = project_data['inverter_lifetime']
+    incentives = project_data['incentives']
+    inflation_rate = project_data['inflation_rate']
+
+    # Calculate ITC amount
+    itc_rate = incentives['itc_rate'] + incentives['additional_itc']
+    itc_amount = capex * itc_rate
+
+    # Calculate NY-specific incentives
+    ny_incentives = calculate_ny_incentives(project_data)
+
+    # Apply ITC and other incentives to reduce CapEx
+    adjusted_capex = capex - itc_amount - ny_incentives
+
+    cash_flows = [-adjusted_capex]
+    for year in range(lifespan):
+        year_generation = annual_generation * (1 - degradation_rate) ** year
+        revenue = year_generation * ppa_price
+        annual_opex = opex * (1 + inflation_rate) ** year
+        inverter_replacement = inverter_cost if (year + 1) % inverter_lifetime == 0 and year + 1 != lifespan else 0
+        cash_flow = revenue - annual_opex - inverter_replacement
+        cash_flows.append(cash_flow)
+
+    return npf.irr(cash_flows)
+
+
+
+
 def generate_cash_flow_df(project_data, ppa_price):
     capacity = project_data['capacity']
     capex = project_data['capex']
@@ -117,27 +154,40 @@ def generate_cash_flow_df(project_data, ppa_price):
     inverter_cost = project_data['inverter_cost']
     inverter_lifetime = project_data['inverter_lifetime']
     incentives = project_data['incentives']
+    inflation_rate = project_data['inflation_rate']
+    incentive_payback_period = project_data['incentive_payback_period']
+
+    # Calculate total incentives
+    itc_amount = capex * (incentives['itc_rate'] + incentives['additional_itc'])
+    ny_incentives = calculate_ny_incentives(project_data) if incentives['ny_selected'] else 0
+    total_incentives = itc_amount + ny_incentives
+    annual_incentive = total_incentives / incentive_payback_period
 
     data = []
     cumulative_cash_flow = -capex
+
     for year in range(lifespan):
         year_generation = annual_generation * (1 - degradation_rate) ** year
         revenue = year_generation * ppa_price
+        annual_opex = opex * (1 + inflation_rate) ** year
         inverter_replacement = inverter_cost if (year + 1) % inverter_lifetime == 0 and year + 1 != lifespan else 0
-        cash_flow = revenue - opex - inverter_replacement
-        if year == 0:
-            cash_flow += incentives
+        
+        incentive = annual_incentive if year < incentive_payback_period else 0
+        
+        cash_flow = revenue - annual_opex - inverter_replacement + incentive
         cumulative_cash_flow += cash_flow
+        
         data.append({
             'Year': year + 1,
             'Annual Generation (kWh)': year_generation,
             'Revenue': revenue,
-            'OpEx': opex,
+            'OpEx': annual_opex,
             'Inverter Replacement': inverter_replacement,
-            'Incentives': incentives if year == 0 else 0,
+            'Incentive': incentive,
             'Cash Flow': cash_flow,
             'Cumulative Cash Flow': cumulative_cash_flow
         })
+
     return pd.DataFrame(data)
 
 def plot_cash_flows(df):
@@ -165,6 +215,7 @@ def export_to_excel(df, fig):
             column = [cell for cell in column]
             for cell in column:
                 try:
+    
                     if len(str(cell.value)) > max_length:
                         max_length = len(cell.value)
                 except:
@@ -196,7 +247,7 @@ def export_to_excel(df, fig):
         chart.x_axis.title = 'Year'
         chart.y_axis.title = 'Cash Flow ($)'
 
-        data = Reference(worksheet, min_col=7, min_row=1, max_col=8, max_row=len(df)+1)
+        data = Reference(worksheet, min_col=6, min_row=1, max_col=7, max_row=len(df)+1)
         chart.add_data(data, titles_from_data=True)
         dates = Reference(worksheet, min_col=1, min_row=2, max_row=len(df)+1)
         chart.set_categories(dates)
@@ -205,82 +256,40 @@ def export_to_excel(df, fig):
 
     return buffer
 
-def calculate_and_display_results(project_data):
-    ppa_price = calculate_ppa_price(project_data)
-    
-    st.success(f'The required PPA price to achieve a {project_data["target_irr"]}% IRR is: ${ppa_price:.4f} per kWh')
-
-    df = generate_cash_flow_df(project_data, ppa_price)
-
-    total_generation = df['Annual Generation (kWh)'].sum()
-    total_revenue = df['Revenue'].sum()
-    total_opex = df['OpEx'].sum()
-    total_inverter_cost = df['Inverter Replacement'].sum()
-    net_profit = total_revenue - total_opex - total_inverter_cost - project_data['capex'] + project_data['incentives']
-
-    st.subheader('Project Metrics')
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric('Total Generation', f'{total_generation/1e6:.2f} GWh')
-        st.metric('Total Revenue', f'${total_revenue/1e6:.2f}M')
-    with col2:
-        st.metric('Total OpEx', f'${total_opex/1e6:.2f}M')
-        st.metric('Net Profit', f'${net_profit/1e6:.2f}M')
-
-    st.subheader('Cash Flow Table')
-    st.dataframe(df.style.format({
-        'Annual Generation (kWh)': '{:,.0f}',
-        'Revenue': '${:,.2f}',
-        'OpEx': '${:,.2f}',
-        'Inverter Replacement': '${:,.2f}',
-        'Incentives': '${:,.2f}',
-        'Cash Flow': '${:,.2f}',
-        'Cumulative Cash Flow': '${:,.2f}'
-    }))
-
-    st.subheader('Interactive Cash Flow Graph')
-    fig = plot_cash_flows(df)
-    st.plotly_chart(fig, use_container_width=True)
-
-    excel_buffer = export_to_excel(df, fig)
-    st.download_button(
-        label="Download Excel Report",
-        data=excel_buffer.getvalue(),
-        file_name="solar_ppa_report.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-    st.session_state.calculated_results = {
-        'ppa_price': ppa_price,
-        'total_generation': total_generation/1e6,
-        'total_revenue': total_revenue,
-        'total_opex': total_opex,
-        'net_profit': net_profit
-    }
-
 def calculate_results(project_data):
-    ppa_price = calculate_ppa_price(project_data)
+    if project_data['use_custom_ppa']:
+        ppa_price = project_data['custom_ppa_price']
+        irr = calculate_irr(project_data, ppa_price)
+    else:
+        ppa_price = calculate_ppa_price(project_data)
+        irr = project_data['target_irr']
+
     df = generate_cash_flow_df(project_data, ppa_price)
     
     total_generation = df['Annual Generation (kWh)'].sum()
     total_revenue = df['Revenue'].sum()
     total_opex = df['OpEx'].sum()
-    total_inverter_cost = df['Inverter Replacement'].sum()
-    net_profit = total_revenue - total_opex - total_inverter_cost - project_data['capex'] + project_data['incentives']
+    total_incentives = df['Incentive'].sum()
+    net_profit = total_revenue - total_opex - project_data['capex'] + total_incentives
 
     results = {
         'ppa_price': ppa_price,
+        'irr': irr,
         'df': df,
         'total_generation': total_generation,
         'total_revenue': total_revenue,
         'total_opex': total_opex,
+        'total_incentives': total_incentives,
         'net_profit': net_profit
     }
     
     return results
 
-def display_results(results):
-    st.success(f'The required PPA price to achieve a {st.session_state.project_data["target_irr"]}% IRR is: ${results["ppa_price"]:.4f} per kWh')
+def display_results(results, project_data):
+    if project_data['use_custom_ppa']:
+        st.success(f'The IRR for the custom PPA price of ${results["ppa_price"]:.4f} per kWh is: {results["irr"]*100:.2f}%')
+    else:
+        st.success(f'The required PPA price to achieve a {project_data["target_irr"]}% IRR is: ${results["ppa_price"]:.4f} per kWh')
 
     st.subheader('Project Metrics')
     col1, col2 = st.columns(2)
@@ -291,13 +300,15 @@ def display_results(results):
         st.metric('Total OpEx', f'${results["total_opex"]/1e6:.2f}M')
         st.metric('Net Profit', f'${results["net_profit"]/1e6:.2f}M')
 
+    st.metric('Total Incentives', f'${results["total_incentives"]:,.2f}')
+
     st.subheader('Cash Flow Table')
     st.dataframe(results['df'].style.format({
         'Annual Generation (kWh)': '{:,.0f}',
         'Revenue': '${:,.2f}',
         'OpEx': '${:,.2f}',
         'Inverter Replacement': '${:,.2f}',
-        'Incentives': '${:,.2f}',
+        'Incentive': '${:,.2f}',
         'Cash Flow': '${:,.2f}',
         'Cumulative Cash Flow': '${:,.2f}'
     }))
@@ -305,9 +316,9 @@ def display_results(results):
     st.subheader('Interactive Cash Flow Graph')
     fig = plot_cash_flows(results['df'])
     st.plotly_chart(fig, use_container_width=True)
-    
+
 def main():
-    st.title('Solar PPA Price Calculator')
+    st.title('PPA <> IRR Calculator ')
 
     st.sidebar.header('Project Inputs')
     with st.sidebar.expander("Project Specifications", expanded=True):
@@ -320,45 +331,114 @@ def main():
         generation_method = st.radio("Generation Calculation Method", ["Annual Generation", "Peak Sun Hours"])
         
         if generation_method == "Annual Generation":
-            annual_generation = st.number_input('Annual Generation (kWh)', value=80000, min_value=1, help="Expected annual electricity generation")
+            annual_generation = st.number_input('Annual Generation (kWh)', value=3000000, min_value=1, help="Expected annual electricity generation")
         else:
             peak_sun_hours = st.number_input('Peak Sun Hours per Day', value=5.0, min_value=1.0, max_value=12.0, help="Average daily hours of peak sunlight")
-            system_efficiency = st.number_input('System Efficiency (%)', value=40.0, min_value=10.0, max_value=100.0, help="Overall efficiency of the solar power system") / 100
+            system_efficiency = st.number_input('System Efficiency (%)', value=80.0, min_value=10.0, max_value=100.0, help="Overall efficiency of the solar power system") / 100
             annual_generation = project_capacity * 1000 * peak_sun_hours * 365 * system_efficiency
 
-        degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.05, min_value=0.0, max_value=5.0, help="Yearly reduction in solar panel efficiency") / 100
+        degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.5, min_value=0.0, max_value=5.0, help="Yearly reduction in solar panel efficiency") / 100
 
     with st.sidebar.expander("Financial Parameters", expanded=True):
         target_irr = st.slider('Target IRR (%)', min_value=5.0, max_value=15.0, value=9.5, step=0.1, help="Internal Rate of Return goal for the project")
+        use_custom_ppa = st.checkbox("Use Custom PPA Price", value=False)
+        if use_custom_ppa:
+            custom_ppa_price = st.number_input('Custom PPA Price ($/kWh)', value=0.10, min_value=0.01, max_value=1.0, step=0.01, help="Enter a custom PPA price to calculate IRR")
+        else:
+            custom_ppa_price = None
         inverter_cost = st.number_input('Inverter Replacement Cost (USD)', value=500000, min_value=0, help="Cost to replace inverters")
         inverter_lifetime = st.number_input('Inverter Lifetime (years)', value=10, min_value=1, max_value=25, help="Expected operational life of inverters")
-        incentives = st.number_input('Incentives (USD)', value=0, min_value=0, help="Any upfront financial incentives or rebates")
+        inflation_rate = st.number_input('Inflation Rate (%)', value=2.0, min_value=0.0, max_value=10.0, step=0.1, help="Annual inflation rate for OpEx") / 100
+        incentive_payback_period = st.number_input('Incentive Payback Period (years)', value=1, min_value=1, max_value=project_lifespan, help="Period over which incentives are applied")
 
-    st.sidebar.markdown('---')
-    st.sidebar.write('This calculator uses a simplified model and does not account for all real-world factors. Results should be used for estimation purposes only.')
+    with st.sidebar.expander("Incentives", expanded=True):
+        st.subheader("Incentives")
+        
+        ny_selected = st.radio("Select Incentive Region", ["General", "New York"])
+        
+        if ny_selected == "New York":
+            project_location = st.radio("Project Location", ["Upstate", "Con Edison"])
+            
+            icsa_eligible = st.checkbox("Eligible for Inclusive Community Solar Adder (ICSA)", 
+                help="The ICSA broadens access to community solar for low-to-moderate income households, affordable housing, and disadvantaged communities in New York.")
+            if icsa_eligible:
+                if project_location == "Upstate":
+                    icsa_rate_upstate = st.slider("ICSA Rate (Upstate)", 0.05, 0.20, 0.10, 0.01, 
+                        help="For Upstate projects, ICSA rate ranges from $0.05/Watt to $0.20/Watt.")
+                else:
+                    icsa_rate_con_ed = st.slider("ICSA Rate (Con Edison)", 0.20, 0.30, 0.25, 0.01, 
+                        help="For Con Edison projects, ICSA rate ranges from $0.20/Watt to $0.30/Watt.")
+            
+            brownfield_eligible = st.checkbox("Eligible for Landfill/Brownfield Adder", 
+                help="A fixed rate of $0.15/Watt for projects developed on brownfield or landfill sites.")
+            
+            prevailing_wage_eligible = st.checkbox("Eligible for Prevailing Wage Adder", 
+                help="For projects that comply with prevailing wage requirements. Upstate: $0.125/Watt DC, Con Edison: $0.20/Watt DC.")
+            
+            nyserda_community_eligible = st.checkbox("Eligible for NYSERDA Community Adder", 
+                help="A fixed rate of $0.07/Watt for projects in Con Edison and Upstate territories that don't qualify for MTC or CC.")
+        
+        itc_rate = st.slider('Base Investment Tax Credit (ITC) Rate (%)', min_value=0.0, max_value=30.0, value=30.0, step=0.1, 
+            help="Base ITC rate as a percentage of CapEx. Typically 30% for solar projects.") / 100
+        
+        additional_itc_category = st.radio("Additional ITC Category", 
+            ["None", "Category 1 & 2", "Category 3 & 4"], 
+            help="""
+            Low-Income Communities Bonus Credit Program categories:
+            - Category 1: Located in a Low-Income Community (10% additional)
+            - Category 2: Located on Indian Land (10% additional)
+            - Category 3: Qualified Low-Income Residential Building Project (20% additional)
+            - Category 4: Qualified Low-Income Economic Benefit Project (20% additional)
+            """)
+        if additional_itc_category == "Category 1 & 2":
+            additional_itc = 0.10
+        elif additional_itc_category == "Category 3 & 4":
+            additional_itc = 0.20
+        else:
+            additional_itc = 0.00
+        
+        st.write(f"Total ITC Rate: {(itc_rate + additional_itc) * 100:.1f}%")
+
+
+    incentives = {
+        'ny_selected': ny_selected == "New York",
+        'project_location': project_location if ny_selected == "New York" else None,
+        'icsa_eligible': icsa_eligible if ny_selected == "New York" else False,
+        'icsa_rate_upstate': icsa_rate_upstate if ny_selected == "New York" and project_location == "Upstate" and icsa_eligible else 0,
+        'icsa_rate_con_ed': icsa_rate_con_ed if ny_selected == "New York" and project_location == "Con Edison" and icsa_eligible else 0,
+        'brownfield_eligible': brownfield_eligible if ny_selected == "New York" else False,
+        'prevailing_wage_eligible': prevailing_wage_eligible if ny_selected == "New York" else False,
+        'nyserda_community_eligible': nyserda_community_eligible if ny_selected == "New York" else False,
+        'itc_rate': itc_rate,
+        'additional_itc': additional_itc
+    }
 
     project_data = {
-        'capacity': project_capacity,
-        'capex': capex,
-        'opex': opex,
-        'lifespan': project_lifespan,
-        'degradation_rate': degradation_rate,
-        'annual_generation': annual_generation,
-        'target_irr': target_irr,
-        'inverter_cost': inverter_cost,
-        'inverter_lifetime': inverter_lifetime,
-        'incentives': incentives
+    'capacity': project_capacity,
+    'capex': capex,
+    'opex': opex,
+    'lifespan': project_lifespan,
+    'degradation_rate': degradation_rate,
+    'annual_generation': annual_generation,
+    'target_irr': target_irr,
+    'inverter_cost': inverter_cost,
+    'inverter_lifetime': inverter_lifetime,
+    'incentives': incentives,
+    'inflation_rate': inflation_rate,
+    'incentive_payback_period': incentive_payback_period,
+    'use_custom_ppa': use_custom_ppa,
+    'custom_ppa_price': custom_ppa_price
     }
 
     st.session_state.project_data = project_data
 
-    if st.button('Calculate PPA Price', key='calculate_ppa_button'):
+    if st.button('Calculate', key='calculate_ppa_button'):
         st.session_state.calculated_results = calculate_results(project_data)
 
     if st.session_state.calculated_results is not None:
-        display_results(st.session_state.calculated_results)
+        display_results(st.session_state.calculated_results, project_data)
         
-        # Create download button only once
+        # Create download button
         excel_buffer = export_to_excel(st.session_state.calculated_results['df'], 
                                        plot_cash_flows(st.session_state.calculated_results['df']))
         st.download_button(
@@ -369,13 +449,6 @@ def main():
             key="download_excel_report"
         )
 
-    show_ai_analysis = st.toggle('✨ Show AI Analysis', key='show_ai_analysis_toggle')
-
-    if show_ai_analysis and st.session_state.calculated_results is not None:
-        st.subheader("AI Analysis")
-        with st.spinner('Generating AI analysis...'):
-            analysis = get_gpt4_analysis(st.session_state.project_data, st.session_state.calculated_results)
-        st.write(analysis)
 
     st.markdown("""
     ## Mathematical Concepts
@@ -410,7 +483,7 @@ def main():
 
     For each year t, the cash flow is calculated as:
 
-    $$CF_t = (G_0 * (1-d)^t * P) - OpEx - I_t + Inc_t$$
+    CF_t = (G_0 * (1-d)^t * P) - OpEx - I_t
 
     Where:
     - $G_0$ is the initial annual generation
@@ -418,7 +491,21 @@ def main():
     - $P$ is the PPA price
     - $OpEx$ is the annual operational expenditure
     - $I_t$ is the inverter replacement cost (if applicable in year t)
-    - $Inc_t$ is the incentive (only applicable in year 0)
+    </details>
+
+    <details>
+    <summary>Incentive Application</summary>
+
+    Total incentives are calculated as:
+
+    Total Incentives = (CapEx * ITC_rate) + (Capacity * 1000 * Σ(Incentive_rates)) + Upfront_Incentive
+
+    Where:
+    - ITC_rate is the Investment Tax Credit rate
+    - Incentive_rates include NY-Sun, LMI, Brownfield, Prevailing Wage, NYSERDA Community, and Other rates
+    - Upfront_Incentive is any additional lump sum incentive
+
+    These incentives are applied to reduce the effective CapEx in the cash flow calculations.
     </details>
     """, unsafe_allow_html=True)
 
