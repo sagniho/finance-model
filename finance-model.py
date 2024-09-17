@@ -339,12 +339,10 @@ def main():
             st.metric("Payback Period", f"{payback_years} years")
         
         st.subheader("Total Project Metrics")
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
             st.metric("Total Revenue", f"${total_revenue:,.0f}")
         with col2:
-            st.metric("Total Operating Expenses", f"${total_operating_expenses:,.0f}")
-        with col3:
             st.metric("Total EBITDA", f"${total_ebitda:,.0f}")
         
         col1, col2, = st.columns(2)
