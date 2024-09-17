@@ -158,7 +158,7 @@ def generate_revenue_table(project_data):
                 price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
                 revenue_type = 'PPA'
             else:
-                price = project_data['merchant_price_start'] * (1 + project_data['merchant_escalation_rate']) ** (year - 1)
+                price = project_data['merchant_price_start'] * (1 + project_data['merchant_escalation_rate']) ** (year)
                 revenue_type = 'Merchant'
             
             revenue = net_production * price / 1000  # Convert kWh to MWh
@@ -199,6 +199,13 @@ def generate_revenue_table(project_data):
         })
     
     revenue_df = pd.DataFrame(data)
+    
+    # Add totals row
+    totals = revenue_df.select_dtypes(include=[np.number]).sum()
+    totals['Year'] = 'Total'
+    totals['Revenue Type'] = ''
+    revenue_df = pd.concat([revenue_df, totals.to_frame().T], ignore_index=True)
+    
     return revenue_df
 
 # Streamlit app
@@ -314,15 +321,16 @@ def main():
         }))
         
         # Calculate and display metrics
-        total_revenue = revenue_df['Revenue ($)'].sum()
-        total_operating_expenses = sum(calculate_operating_expenses(project_data, year) for year in range(1, project_data['ppa_tenor'] + project_data['post_ppa_tenor'] + 1))
-        total_ebitda = total_revenue - total_operating_expenses
-        total_cash_flows = sum(revenue_df['Total Cash Flows ($)'])
+        total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
+        total_operating_expenses = revenue_df.loc[revenue_df['Year'] == 'Total', 'Operating Expenses ($)'].values[0]
+        total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
+        total_cash_flows = revenue_df.loc[revenue_df['Year'] == 'Total', 'Total Cash Flows ($)'].values[0]
+        total_capex = calculate_capex(project_data)
 
         st.subheader("Key Metrics")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Total CapEx", f"${calculate_capex(project_data):,.0f}")
+            st.metric("Total CapEx", f"${total_capex:,.0f}")
         with col2:
             st.metric("Total Operating Expenses", f"${total_operating_expenses:,.0f}")
         with col3:
@@ -335,16 +343,19 @@ def main():
         with col1:
             st.metric("Total Revenue", f"${total_revenue:,.0f}")
         with col2:
-            st.metric("Total EBITDA", f"${total_ebitda:,.0f}")
+            st.metric("Total Operating Expenses", f"${total_operating_expenses:,.0f}")
         with col3:
-            st.metric("Total Cash Flows", f"${total_cash_flows:,.0f}")
+            st.metric("Total EBITDA", f"${total_ebitda:,.0f}")
         
-        # Display total ITC cash flows left
-        st.metric("Remaining ITC Cash Flows after Buyout", f"${remaining_itc_cash_flows:,.0f}")
+        col1, col2, = st.columns(2)
+        with col1:
+            st.metric("Total Cash Flows", f"${total_cash_flows:,.0f}")
+        with col2:
+            st.metric("Remaining ITC Cash Flows after Buyout", f"${remaining_itc_cash_flows:,.0f}")
         
         # Plot cash flows
         cash_flow_df = pd.DataFrame({
-            'Year': range(len(cash_flows)),
+            'Year': revenue_df['Year'][:-1],  # Exclude 'Total' row for plotting
             'Cash Flow': cash_flows,
             'Cumulative Cash Flow': np.cumsum(cash_flows)
         })
