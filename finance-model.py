@@ -33,35 +33,65 @@ def calculate_revenue(project_data, year):
     return revenue
 
 def calculate_operating_expenses(project_data, year):
-    if year == 0:  # Year 0 only includes construction rent
-        return project_data['construction_rent'] * project_data['site_acres']
+    if year == 0:
+        # Year 0: Only Construction Rent applies
+        total_opex = project_data['construction_rent'] * project_data['site_acres']
+        return total_opex
     
-    # For other years, calculate full breakdown of operating expenses
-    escalation_factor = (1 + project_data['opex_escalation']) ** (year - 1)  # Start escalation from year 1 (after construction)
+    # Initialize expenses to zero
+    om_cost = 0
+    asset_management = 0
+    insurance = 0
+    property_tax = 0
+    inverter_replacement = 0
+    rent = 0
     
-    # Calculate O&M and other expenses starting from year 1
-    om_cost = project_data['om_cost'] * project_data['project_size_dc'] * 1000 * escalation_factor
-    asset_management = project_data['asset_management_cost'] * project_data['project_size_dc'] * 1000 * escalation_factor
-    insurance = project_data['insurance_cost'] * project_data['project_size_dc'] * 1000  # Assuming no escalation for insurance
-    property_tax = project_data['property_tax'] * project_data['site_acres'] * escalation_factor
+    # Property Tax and Rent start from Year 1
+    property_tax_escalation_factor = (1 + project_data['property_tax_escalation']) ** (year - 1)
+    operating_rent_escalation_factor = (1 + project_data['operating_rent_escalation']) ** (year - 1)
+    property_tax = project_data['property_tax'] * project_data['site_acres'] * property_tax_escalation_factor
+    rent = project_data['operating_rent'] * project_data['site_acres'] * operating_rent_escalation_factor
+    asset_management_escalation_factor = (1 + project_data['asset_management_escalation']) ** (year - 1)
+    
+    if year >= 2:
+        # O&M and Asset Management Costs start from Year 2
+        om_escalation_factor = (1 + project_data['om_escalation']) ** (year - 2)
+        
+        
+        om_cost = project_data['om_cost'] * project_data['project_size_dc'] * 1000 * om_escalation_factor
+        asset_management = project_data['asset_management_cost'] * project_data['project_size_dc'] * 1000 * asset_management_escalation_factor
+        insurance = project_data['insurance_cost'] * project_data['project_size_dc'] * 1000  # Assuming starts in Year 2
+        
+    # Inverter Replacement starts from Year 6
     inverter_replacement = project_data['inverter_replacement_cost'] * project_data['project_size_dc'] * 1000 if year >= 6 else 0
-    rent = project_data['operating_rent'] * project_data['site_acres'] * escalation_factor
     
+    # Sum up all operating expenses
     total_opex = om_cost + asset_management + insurance + property_tax + inverter_replacement + rent
     return total_opex
 
+
+
 def calculate_tax_equity(project_data):
-    # Calculate CapEx (Capital Expenditures)
-    capex = calculate_capex(project_data)
+    # Calculate Total CapEx (including all components)
+    total_capex = calculate_capex(project_data)
+    
+    # Calculate ITC Eligible CapEx (excluding Transaction Costs)
+    itc_eligible_capex = (project_data['epc_cost'] + project_data['interconnection_cost'] + 
+                          project_data['developer_fee']) * project_data['project_size_dc'] * 1e6
     
     # Calculate ITC (Investment Tax Credit)
-    itc = capex * project_data['itc_amount'] * project_data['itc_eligible_portion']
+    itc = itc_eligible_capex * project_data['itc_amount'] * project_data['itc_eligible_portion']
     
     # Calculate FMV (Fair Market Value) with step-up
-    fmv = itc * (1 + project_data['fmv_step_up'])  # FMV Step-up applied on ITC cost
+    fmv = itc * (1 + project_data['fmv_step_up'])  # FMV Step-up applied on ITC
     
-    # Calculate tax equity investment based on ITC and a multiplier
-    te_investment = itc * project_data['te_investment']  # TE Investment from ITC portion
+    # Calculate Tax Equity Investment based on ITC and a multiplier
+    te_investment = itc * project_data['te_investment']
+    
+    # Display ITC and FMV values for debugging or informational purposes
+    print(f"Calculated ITC Eligible CapEx: ${itc_eligible_capex:,.2f}")
+    print(f"Calculated ITC: ${itc:,.2f}")
+    print(f"Calculated FMV: ${fmv:,.2f}")
     
     # Return the calculated values
     return {'itc': itc, 'fmv': fmv, 'te_investment': te_investment}
@@ -235,10 +265,15 @@ def main():
 
     with st.sidebar.expander("Expense Inputs", expanded=True):
         om_cost = st.number_input('O&M Cost ($/kW/year)', value=6.00, min_value=0.0)
+        om_escalation = st.number_input('O&M Escalation (%)', value=2.0, min_value=0.0, max_value=10.0) / 100
         asset_management_cost = st.number_input('Asset Management Cost ($/kW/year)', value=2.00, min_value=0.0)
+        asset_management_escalation = st.number_input('Asset Management Escalation (%)', value=1.5, min_value=0.0, max_value=10.0) / 100
         insurance_cost = st.number_input('Insurance Cost ($/kW/year)', value=4.50, min_value=0.0)
         property_tax = st.number_input('Property Tax ($/acre/year)', value=1200.00, min_value=0.0)
+        property_tax_escalation = st.number_input('Property Tax Escalation (%)', value=2.0, min_value=0.0, max_value=10.0) / 100
         inverter_replacement_cost = st.number_input('Inverter Replacement Cost ($/kW/year)', value=4.00, min_value=0.0)
+        operating_rent_escalation = st.number_input('Operating Rent Escalation (%)', value=2.0, min_value=0.0, max_value=10.0) / 100
+
 
     with st.sidebar.expander("CapEx Inputs", expanded=True):
         epc_cost = st.number_input('EPC Cost ($/W-dc)', value=1.65, min_value=0.0, max_value=5.0)
@@ -278,7 +313,10 @@ def main():
         'ppa_escalation': ppa_escalation,
         'merchant_price_start': merchant_price_start,
         'merchant_escalation_rate': merchant_escalation_rate,
-        'opex_escalation': opex_escalation,
+        'om_escalation': om_escalation,
+        'asset_management_escalation': asset_management_escalation,
+        'property_tax_escalation': property_tax_escalation,
+        'operating_rent_escalation': operating_rent_escalation,
         'ppa_tenor': ppa_tenor,
         'post_ppa_tenor': post_ppa_tenor,
         'om_cost': om_cost,
@@ -307,6 +345,14 @@ def main():
         cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data)
         irr = calculate_irr(cash_flows)
         st.success(f'The project IRR is: {irr*100:.2f}%')
+
+        # Display Tax Equity Details
+        tax_equity = calculate_tax_equity(project_data)
+        st.subheader("Tax Equity Details")
+        st.write(f"**Calculated ITC Eligible CapEx:** ${tax_equity['itc'] / (project_data['itc_amount'] * project_data['itc_eligible_portion']):,.2f}")
+        st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
+        st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
+     
 
         # Generate revenue table with operating expenses and total cash flows
         revenue_df = generate_revenue_table(project_data)
