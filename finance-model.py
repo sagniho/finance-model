@@ -52,22 +52,24 @@ def calculate_operating_expenses(project_data, year):
     property_tax = project_data['property_tax'] * project_data['site_acres'] * property_tax_escalation_factor
     rent = project_data['operating_rent'] * project_data['site_acres'] * operating_rent_escalation_factor
     asset_management_escalation_factor = (1 + project_data['asset_management_escalation']) ** (year - 1)
+    asset_management = project_data['asset_management_cost'] * project_data['project_size_dc'] * 1000 * asset_management_escalation_factor
+    insurance = project_data['insurance_cost'] * project_data['project_size_dc'] * 1000  # Assuming starts in Year 2
     
     if year >= 2:
         # O&M and Asset Management Costs start from Year 2
         om_escalation_factor = (1 + project_data['om_escalation']) ** (year - 2)
-        
-        
         om_cost = project_data['om_cost'] * project_data['project_size_dc'] * 1000 * om_escalation_factor
-        asset_management = project_data['asset_management_cost'] * project_data['project_size_dc'] * 1000 * asset_management_escalation_factor
-        insurance = project_data['insurance_cost'] * project_data['project_size_dc'] * 1000  # Assuming starts in Year 2
         
-    # Inverter Replacement starts from Year 6
-    inverter_replacement = project_data['inverter_replacement_cost'] * project_data['project_size_dc'] * 1000 if year >= 6 else 0
+        
+    # Inverter Replacement starts from Year 6 and only for a 10-year period based on MW-AC
+    if 6 <= year <= 15:
+        inverter_replacement = project_data['inverter_replacement_cost'] * project_data['project_size_ac'] * 1000
     
     # Sum up all operating expenses
     total_opex = om_cost + asset_management + insurance + property_tax + inverter_replacement + rent
+    
     return total_opex
+
 
 
 
