@@ -402,30 +402,32 @@ def main():
             itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
             avoided_cost_ppa_price = st.number_input('Initial PPA Price ($/MWh)', value=155.0, min_value=0.0, disabled=False)
             avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-
-            # Rent option toggle for both construction and operating rents
-            rent_option = st.selectbox("Select Rent Calculation Method", 
-                                       options=["Flat Lease/Year", "$/Acre + Escalation", "$/MW-ac + Escalation"], disabled=False)
-
+        
+            # Rent option toggle for both construction and operating rents (now a radio button)
+            rent_option = st.radio("Select Rent Calculation Method", 
+                                   options=["Flat Lease/Year", "$/Acre + Escalation", "$/MW-ac + Escalation"], 
+                                   index=0)  # Default selection is the first option
+        
             # Initialize site_acres to a default value
             site_acres = 0
-
+        
             # Construction Rent inputs based on the selected rent option
             if rent_option == "Flat Lease/Year":
                 construction_rent = st.number_input('Construction Rent (Flat $/year)', value=50000.0, min_value=0.0, disabled=False)
                 operating_rent = st.number_input('Operating Rent (Flat $/year)', value=36000.0, min_value=0.0, disabled=False)
                 rent_escalation = st.number_input('Flat Lease Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-
+        
             elif rent_option == "$/Acre + Escalation":
                 construction_rent = st.number_input('Construction Rent ($/acre/year)', value=600.0, min_value=0.0, disabled=False)
                 operating_rent = st.number_input('Operating Rent ($/acre/year)', value=1200.0, min_value=0.0, disabled=False)
                 rent_escalation = st.number_input('Rent Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
                 site_acres = st.number_input('Site Acres', value=30.0, min_value=0.1, disabled=False)  # Only defined here
-
+        
             elif rent_option == "$/MW-ac + Escalation":
                 construction_rent = st.number_input('Construction Rent ($/MW-ac/year)', value=8000.0, min_value=0.0, disabled=False)
                 operating_rent = st.number_input('Operating Rent ($/MW-ac/year)', value=25000.0, min_value=0.0, disabled=False)
                 rent_escalation = st.number_input('MW-ac Rent Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
+
 
         with st.sidebar.expander("Schedule", expanded=True):
             cod_date = st.date_input('Commercial Operation Date', value=datetime(2025, 12, 31), disabled=False)
