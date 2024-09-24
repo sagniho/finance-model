@@ -379,11 +379,6 @@ def main():
 
     name, authentication_status, username = authenticator.login('main')
 
-    if authentication_status:
-        authenticator.logout('Logout', location='sidebar')
-        st.sidebar.write(f'Welcome *{name}*')
-
-    name, authentication_status, username = authenticator.login('main')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
