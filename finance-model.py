@@ -347,7 +347,7 @@ def generate_revenue_table(project_data, rent_option):
 
 # Main application function
 def main():
-    t.set_page_config(page_title='C&I PPA Model', layout='wide')
+    st.set_page_config(page_title='C&I PPA Model', layout='wide')
     
     # Retrieve credentials from st.secrets
     admin_username = st.secrets["auth"]["admin_username"]
