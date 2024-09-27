@@ -6,30 +6,6 @@ import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
 
-def add_footer():
-    footer = """
-    <style>
-    /* Hide Streamlit footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-
-    /* Custom footer */
-    .footer {
-        visibility: visible;
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        color: grey;
-        padding: 5px;
-    }
-    </style>
-    <div class="footer">
-    <p>Aggreko Energy Transition Solutions 2024</p>
-    </div>
-    """
-    st.markdown(footer, unsafe_allow_html=True)
 
 merchant_price_curves = {
     'NY': {
@@ -691,19 +667,46 @@ def main():
 
             # Plot the stacked savings chart
             st.plotly_chart(plot_stacked_savings_chart(revenue_df))
-            add_footer()
+      
 
 
 
 
     elif authentication_status == False:
         st.error('Username/password is incorrect')
-        st.image('logo.png', width=200)
+
         
     elif authentication_status == None:
         st.warning('Please enter your username and password')
-        st.image('logo.png', width=200)
+        
 
+    add_footer()
+
+
+def add_footer():
+    footer = """
+    <style>
+    /* Hide Streamlit footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Custom footer */
+    .footer {
+        visibility: visible;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        color: grey;
+        padding: 5px;
+    }
+    </style>
+    <div class="footer">
+    <p>Aggreko Energy Transition Solutions 2024</p>
+    </div>
+    """
+    st.markdown(footer, unsafe_allow_html=True)
 if __name__ == "__main__":
     main()
 
