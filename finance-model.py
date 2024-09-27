@@ -5,42 +5,75 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
+# Import htbuilder components
+from htbuilder import HtmlElement, div, ul, li, br, hr, a, p, img, styles, classes, fonts
+from htbuilder.units import percent, px
+from htbuilder.funcs import rgba, rgb
 
-def add_custom_footer():
-    st.markdown("""
+
+def image(src_as_string, **style):
+    return img(src=src_as_string, style=styles(**style))
+
+def link(link, text, **style):
+    return a(_href=link, _target="_blank", style=styles(**style))(text)
+
+def layout(*args):
+    style = """
     <style>
-        /* Make the main container a flexbox */
-        .reportview-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        /* Make the content container grow to fill available space */
-        .block-container {
-            flex: 1;
-        }
-
-        /* Style for the footer */
-        .footer {
-            text-align: center;
-            padding: 10px;
-            background-color: #f1f1f1;
-            position: relative;
-            bottom: 0;
-            width: 100%;
-        }
+      # MainMenu {visibility: hidden;}
+      footer {visibility: hidden;}
+      .stApp { bottom: 105px; }
     </style>
-    """, unsafe_allow_html=True)
-
-    # Add the footer content
-    footer_html = """
-    <div class="footer">
-        <hr>
-        <p>Aggreko Energy Transition Solutions 2024</p>
-    </div>
     """
-    st.markdown(footer_html, unsafe_allow_html=True)
+
+    style_div = styles(
+        position="fixed",
+        left=0,
+        bottom=0,
+        margin=px(0, 0, 0, 0),
+        width=percent(100),
+        color="black",
+        text_align="center",
+        height="auto",
+        opacity=1
+    )
+
+    style_hr = styles(
+        display="block",
+        margin=px(8, 8, "auto", "auto"),
+        border_style="inset",
+        border_width=px(2)
+    )
+
+    body = p()
+    foot = div(
+        style=style_div
+    )(
+        hr(
+            style=style_hr
+        ),
+        body
+    )
+
+    st.markdown(style, unsafe_allow_html=True)
+
+    for arg in args:
+        if isinstance(arg, str):
+            body(arg)
+        elif isinstance(arg, HtmlElement):
+            body(arg)
+
+    st.markdown(str(foot), unsafe_allow_html=True)
+
+def footer():
+    myargs = [
+        "Made with ",
+        image('https://i.imgur.com/6IUbEMO.png',  # Example heart image
+              width=px(15), height=px(15)),
+        " by ",
+        link("https://buymeacoffee.com/chrischross", "Aggreko Energy Transition Solutions 2024"),
+    ]
+    layout(*myargs)
 
 
 merchant_price_curves = {
@@ -714,9 +747,9 @@ def main():
         
     elif authentication_status == None:
         st.warning('Please enter your username and password')
-    # Add a spacer to push the footer down
-    st.write('\n' * 100)
-    add_custom_footer()
+
+    footer()
+
         
 
    
