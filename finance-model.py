@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
-from htbuilder import HtmlElement, div, ul, li, br, hr, a, p, img, styles, classes, fonts
+from htbuilder import HtmlElement, div, ul, li, br, hr, a, p, i, img, styles, classes, fonts
 from htbuilder.units import percent, px
 from htbuilder.funcs import rgba, rgb
 
@@ -66,8 +66,8 @@ def layout(*args):
 
 def footer():
     myargs = [
-        "C&I PPA Model - an AETS tool ",
-        link("https://aggrekoets.com/", "© Aggreko Energy Transition Solutions 2024"),
+        i("C&I PPA Model - an AETS tool     |c© Aggreko Energy Transition Solutions 2024     "),
+        link("https://aggrekoets.com/", "aggrekoets.com"),
     ]
     layout(*myargs)
 
