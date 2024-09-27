@@ -66,7 +66,9 @@ def layout(*args):
 
 def footer():
     myargs = [
-        i("C&I PPA Model - an AETS tool     |© Aggreko Energy Transition Solutions 2024     |       "),
+        i("C&I PPA Model - an AETS tool"),
+        i("|       © Aggreko Energy Transition Solutions 2024     |       "),
+        ("/n"),
         link("https://aggrekoets.com/", "aggrekoets.com"),
     ]
     layout(*myargs)
