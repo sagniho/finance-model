@@ -440,9 +440,9 @@ def generate_revenue_table(project_data, rent_option, state):
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
     col1, col2 = st.columns(2)
-    with col2:
-        st.subheader('C&I PPA Model')
     with col1:
+        st.header('C&I PPA Model')
+    with col2:
         st.image('logo.png', width=150)
 
     
