@@ -525,7 +525,10 @@ def main():
             'tax_rate': tax_rate,
             'rent_option': rent_option,
             'avoided_cost_ppa_price': avoided_cost_ppa_price,
-            'avoided_cost_escalation': avoided_cost_escalation
+            'avoided_cost_escalation': avoided_cost_escalation,
+             'other_asset_management_cost': other_asset_management_cost,
+            'other_asset_management_escalation': other_asset_management_escalation,
+            'discount_rate': discount_rate
         }
 
         if st.button('Calculate IRR'):
