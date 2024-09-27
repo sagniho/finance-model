@@ -6,6 +6,31 @@ import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
 
+def add_footer():
+    footer = """
+    <style>
+    /* Hide Streamlit footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Custom footer */
+    .footer {
+        visibility: visible;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        color: grey;
+        padding: 5px;
+    }
+    </style>
+    <div class="footer">
+    <p>Aggreko Energy Transition Solutions 2024</p>
+    </div>
+    """
+    st.markdown(footer, unsafe_allow_html=True)
+
 merchant_price_curves = {
     'NY': {
         'years': list(range(2024, 2071)),
@@ -372,7 +397,8 @@ def generate_revenue_table(project_data, rent_option, state):
 
 # Main application function
 def main():
-    st.set_page_config(page_title='C&I PPA Model', layout='wide')
+    st.set_page_config(page_title='C&I PPA Model', page_icon='logo.png', layout='wide')
+
     
     # Retrieve credentials from st.secrets
     admin_username = st.secrets["auth"]["admin_username"]
@@ -414,7 +440,9 @@ def main():
             user_type = 'admin'
         else:
             user_type = 'user'
+            
 
+        st.image('logo.png', width=150)
         st.title('C&I PPA Model')
 
         st.sidebar.header('Project Inputs')
@@ -663,14 +691,19 @@ def main():
 
             # Plot the stacked savings chart
             st.plotly_chart(plot_stacked_savings_chart(revenue_df))
+            add_footer()
 
 
 
 
     elif authentication_status == False:
         st.error('Username/password is incorrect')
+        st.image('logo.png', width=200)
+        
     elif authentication_status == None:
         st.warning('Please enter your username and password')
+        st.image('logo.png', width=200)
 
 if __name__ == "__main__":
     main()
+
