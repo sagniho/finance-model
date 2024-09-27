@@ -7,6 +7,7 @@ from datetime import datetime
 import streamlit_authenticator as stauth
 
 
+
 def format_hover_value(value):
     if abs(value) >= 1e6:
         return f"${value/1e6:,.2f}MM"
@@ -110,7 +111,6 @@ def calculate_operating_expenses(project_data, year, rent_option):
     # Initialize other expenses to zero for Year 1 onwards
     om_cost = 0
     asset_management = 0
-    other_asset_management = 0
     insurance = 0
     property_tax = 0
     inverter_replacement = 0
@@ -137,10 +137,6 @@ def calculate_operating_expenses(project_data, year, rent_option):
     asset_management_escalation_factor = (1 + project_data['asset_management_escalation']) ** (year - 1)
     asset_management = project_data['asset_management_cost'] * project_data['project_size_dc'] * 1000 * asset_management_escalation_factor
     
-    # Other Asset Management cost escalates annually
-    other_asset_management_escalation_factor = (1 + project_data['other_asset_management_escalation']) ** (year - 1)
-    other_asset_management = project_data['other_asset_management_cost'] * project_data['project_size_dc'] * 1000 * other_asset_management_escalation_factor
-    
     # Insurance cost per MW-DC, no escalation assumed
     insurance = project_data['insurance_cost'] * project_data['project_size_dc'] * 1000  # Assuming insurance cost starts from Year 1
     
@@ -154,7 +150,7 @@ def calculate_operating_expenses(project_data, year, rent_option):
         inverter_replacement = project_data['inverter_replacement_cost'] * project_data['project_size_ac'] * 1000
     
     # Sum up all operating expenses
-    total_opex = om_cost + asset_management + other_asset_management + insurance + property_tax + inverter_replacement + rent
+    total_opex = om_cost + asset_management + insurance + property_tax + inverter_replacement + rent
     
     return total_opex
 
@@ -177,6 +173,11 @@ def calculate_tax_equity(project_data):
     
     # Calculate Tax Equity Investment based on ITC and a multiplier
     te_investment = itc * project_data['te_investment']
+    
+    # Display ITC and FMV values for debugging or informational purposes
+    print(f"Calculated ITC Eligible CapEx: ${itc_eligible_capex:,.2f}")
+    print(f"Calculated ITC: ${itc:,.2f}")
+    print(f"Calculated FMV: ${fmv:,.2f}")
     
     # Return the calculated values
     return {'itc': itc, 'fmv': fmv, 'te_investment': te_investment}
@@ -333,6 +334,8 @@ def generate_revenue_table(project_data, rent_option):
     
     revenue_df = pd.DataFrame(data)
     
+    
+    
     # Add totals row
     totals = revenue_df.select_dtypes(include=[np.number]).sum()
     totals['Year'] = 'Total'
@@ -397,9 +400,8 @@ def main():
             ppa_tenor = st.number_input('PPA Tenor (years)', value=20, min_value=1, max_value=30, disabled=False)
             post_ppa_tenor = st.number_input('Post-PPA Tenor (years)', value=16, min_value=0, max_value=30, disabled=False)
             itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
-            avoided_cost_ppa_price = st.number_input('Avoided PPA Price ($/MWh)', value=155.0, min_value=0.0, disabled=False)
+            avoided_cost_ppa_price = st.number_input('Initial PPA Price ($/MWh)', value=155.0, min_value=0.0, disabled=False)
             avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-            production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=False)
         
             # Rent option toggle for both construction and operating rents (now a radio button)
             rent_option = st.radio("Select Rent Calculation Method", 
@@ -435,6 +437,10 @@ def main():
         # For other sections, inputs are disabled for 'user' type
         disabled_input = (user_type == 'user')
 
+        with st.sidebar.expander("Performance Parameters", expanded=False):
+            production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=disabled_input)
+            degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.5, min_value=0.0, max_value=5.0, disabled=disabled_input) / 100
+
         with st.sidebar.expander("Financial Parameters", expanded=False):
             ppa_escalation = st.number_input('PPA Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             merchant_escalation_rate = st.number_input('Merchant Price Escalation (%)', value=1.5, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
@@ -442,7 +448,7 @@ def main():
             tax_rate = st.number_input('Tax Rate (%)', value=21.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
             developer_fee = st.number_input('Developer Fee ($/W-dc)', value=0.25, min_value=0.0, max_value=1.0, disabled=disabled_input)
 
-        with st.sidebar.expander("OpEx Inputs", expanded=False):
+        with st.sidebar.expander("Expense Inputs", expanded=False):
             om_cost = st.number_input('O&M Cost ($/kW/year)', value=6.00, min_value=0.0, disabled=disabled_input)
             om_escalation = st.number_input('O&M Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             asset_management_cost = st.number_input('Asset Management Cost ($/kW/year)', value=2.00, min_value=0.0, disabled=disabled_input)
@@ -450,8 +456,6 @@ def main():
             insurance_cost = st.number_input('Insurance Cost ($/kW/year)', value=4.50, min_value=0.0, disabled=disabled_input)
             property_tax = st.number_input('Property Tax ($/acre/year)', value=1200.00, min_value=0.0, disabled=disabled_input)
             property_tax_escalation = st.number_input('Property Tax Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            other_asset_management_cost = st.number_input('Other Asset Management ($/kW/year)', value=5.00, min_value=0.0, disabled=disabled_input)
-            other_asset_management_escalation = st.number_input('Other Asset Management Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             inverter_replacement_cost = st.number_input('Inverter Replacement Cost ($/kW/year)', value=4.00, min_value=0.0, disabled=disabled_input)
 
         with st.sidebar.expander("CapEx Inputs", expanded=False):
@@ -468,13 +472,11 @@ def main():
             buyout_percentage = st.number_input('Buyout (%)', value=7.25, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
 
 
-        with st.sidebar.expander("Other Parameters", expanded=False):
-            degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.5, min_value=0.0, max_value=5.0, disabled=disabled_input) / 100
+        with st.sidebar.expander("Advanced Parameters", expanded=False):
             degradation_start_year = st.number_input('Degradation Start Year', value=1, min_value=1, disabled=disabled_input)
             ppa_escalation_start_year = st.number_input('PPA Escalation Start Year', value=2, min_value=1, disabled=disabled_input)
             ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=disabled_input)
             merchant_price_start = st.number_input('Initial Merchant Price ($/MWh)', value=55.0, min_value=0.0, disabled=disabled_input)
-
 
         # Collect project data inputs
         project_data = {
@@ -492,14 +494,12 @@ def main():
             'merchant_escalation_rate': merchant_escalation_rate,
             'om_escalation': om_escalation,
             'asset_management_escalation': asset_management_escalation,
-            'other_asset_management_escalation': other_asset_management_escalation,  # new
             'property_tax_escalation': property_tax_escalation,
             'rent_escalation': rent_escalation,
             'ppa_tenor': ppa_tenor,
             'post_ppa_tenor': post_ppa_tenor,
             'om_cost': om_cost,
             'asset_management_cost': asset_management_cost,
-            'other_asset_management_cost': other_asset_management_cost,  # new
             'insurance_cost': insurance_cost,
             'property_tax': property_tax,
             'inverter_replacement_cost': inverter_replacement_cost,
@@ -520,14 +520,20 @@ def main():
             'tax_rate': tax_rate,
             'rent_option': rent_option,
             'avoided_cost_ppa_price': avoided_cost_ppa_price,
-            'avoided_cost_escalation': avoided_cost_escalation,
-            'discount_rate': discount_rate  # new
+            'avoided_cost_escalation': avoided_cost_escalation
         }
 
         if st.button('Calculate IRR'):
             cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option)
             irr = calculate_irr(cash_flows)
             st.success(f'The project IRR is: {irr*100:.2f}%')
+
+            # Display Tax Equity Details
+            #tax_equity = calculate_tax_equity(project_data)
+            #st.subheader("Tax Equity Details")
+            #st.write(f"**Calculated ITC Eligible CapEx:** ${tax_equity['itc'] / (project_data['itc_amount'] * project_data['itc_eligible_portion']):,.2f}")
+            #st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
+            #st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
 
             # Generate revenue table with operating expenses and total cash flows
             revenue_df = generate_revenue_table(project_data, rent_option)
@@ -546,35 +552,13 @@ def main():
             }))
 
 
+
             # Calculate and display metrics
             total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
             total_operating_expenses = revenue_df.loc[revenue_df['Year'] == 'Total', 'Operating Expenses ($)'].values[0]
             total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
             total_cash_flows = revenue_df.loc[revenue_df['Year'] == 'Total', 'Total Cash Flows ($)'].values[0]
             total_capex = calculate_capex(project_data)
-
-            # Calculate NPV
-            npv = npf.npv(project_data['discount_rate'], cash_flows)
-
-            # Calculate LCOE
-            costs = []
-            net_production_list = []
-
-            for i, year in enumerate(revenue_df['Year'][:-1]):  # Exclude 'Total' row
-                if i == 0:
-                    # Year 0
-                    cost = calculate_capex(project_data)  # Capex
-                    net_production = 0
-                else:
-                    cost = revenue_df.loc[i, 'Operating Expenses ($)']
-                    net_production = revenue_df.loc[i, 'Net Production (MWh)']
-                costs.append(cost)
-                net_production_list.append(net_production)
-
-            pv_costs = sum(costs[t] / (1 + project_data['discount_rate']) ** t for t in range(len(costs)))
-            pv_energy = sum(net_production_list[t] / (1 + project_data['discount_rate']) ** t for t in range(len(net_production_list)))
-
-            LCOE = pv_costs / pv_energy  # $/MWh
 
             st.subheader("Key Metrics")
             col1, col2, col3 = st.columns(3)
@@ -585,15 +569,13 @@ def main():
             with col3:
                 cumulative_cash_flows = np.cumsum(cash_flows)
                 payback_years = np.argmax(cumulative_cash_flows > 0)
-                st.metric("Payback Period", f"{payback_years} years")
+            # Display Total Savings in Key Metrics
+            # Calculate total savings
+            total_savings_unlocked = revenue_df.loc[revenue_df['Year'] != 'Total', 'Savings Unlocked ($)'].sum()
+            
 
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("NPV", f"${npv / 1e6:,.2f}MM")
-            with col2:
-                st.metric("LCOE", f"${LCOE:,.2f}/MWh")
-            with col3:
-                pass  # You can add another metric here if desired
+            st.metric("Payback Period", f"{payback_years} years")
+
 
             st.subheader("Total Project Metrics")
             col1, col2, col3 = st.columns(3)
@@ -602,8 +584,6 @@ def main():
             with col2:
                 st.metric("Total EBITDA", f"${total_ebitda / 1e6:,.0f}MM")
             with col3:
-                # Calculate total savings
-                total_savings_unlocked = revenue_df.loc[revenue_df['Year'] != 'Total', 'Savings Unlocked ($)'].sum()
                 st.metric("Total Savings Unlocked", f"${total_savings_unlocked / 1e6:,.0f}MM")
 
             col1, col2, col3 = st.columns(3)
@@ -611,8 +591,7 @@ def main():
                 st.metric("Total Cash Flows", f"${total_cash_flows / 1e6:,.0f}MM")
             with col2:
                 st.metric("Remaining ITC Cash Flows after Buyout", f"${remaining_itc_cash_flows / 1e6:,.0f}MM")
-            with col3:
-                pass  # You can add another metric here if desired
+
 
 
             # Plot cash flows
