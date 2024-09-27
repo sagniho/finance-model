@@ -439,10 +439,10 @@ def generate_revenue_table(project_data, rent_option, state):
 # Main application function
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.header('C&I PPA Model')
-    with col2:
+    with col3:
         st.image('logo.png', width=150)
 
     
