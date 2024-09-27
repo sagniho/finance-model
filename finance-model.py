@@ -6,6 +6,22 @@ import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
 
+def add_custom_footer():
+    st.markdown("""
+    <style>
+    /* Hide Streamlit footer */
+    footer {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Add the custom footer content
+    footer_html = """
+    <div style='text-align: center; padding: 10px;'>
+        <hr style='margin: 0;'>
+        <small>Aggreko Energy Transition Solutions 2024</small>
+    </div>
+    """
+    st.markdown(footer_html, unsafe_allow_html=True)
 
 merchant_price_curves = {
     'NY': {
@@ -678,35 +694,12 @@ def main():
         
     elif authentication_status == None:
         st.warning('Please enter your username and password')
+    # Add a spacer to push the footer down
+    st.write('\n' * 10)
+    add_custom_footer()
         
 
-    add_footer()
-
-
-def add_footer():
-    footer = """
-    <style>
-    /* Hide Streamlit footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-
-    /* Custom footer */
-    .footer {
-        visibility: visible;
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        color: grey;
-        padding: 5px;
-    }
-    </style>
-    <div class="footer">
-    <p>Aggreko Energy Transition Solutions 2024</p>
-    </div>
-    """
-    st.markdown(footer, unsafe_allow_html=True)
+   
 if __name__ == "__main__":
     main()
 
