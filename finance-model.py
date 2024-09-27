@@ -538,6 +538,9 @@ def main():
             irr = calculate_irr(cash_flows)
             st.success(f'The project IRR is: {irr*100:.2f}%')
 
+            # Generate revenue table with operating expenses and total cash flows
+            revenue_df = generate_revenue_table(project_data, rent_option)
+
             # Calculate NPV
             NPV = npf.npv(discount_rate, cash_flows)
             
@@ -568,8 +571,7 @@ def main():
             #st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
             #st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
 
-            # Generate revenue table with operating expenses and total cash flows
-            revenue_df = generate_revenue_table(project_data, rent_option)
+            
             
 
             st.subheader("Annual Project Details")
