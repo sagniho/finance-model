@@ -68,10 +68,10 @@ def layout(*args):
 def footer():
     myargs = [
         "Made with ",
-        image('https://i.imgur.com/6IUbEMO.png',  # Example heart image
+        image('a.png',  # Example heart image
               width=px(15), height=px(15)),
-        " by ",
-        link("https://buymeacoffee.com/chrischross", "Aggreko Energy Transition Solutions 2024"),
+        " ",
+        link("https://aggrekoets.com/", "© Aggreko Energy Transition Solutions 2024"),
     ]
     layout(*myargs)
 
