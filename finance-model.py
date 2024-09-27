@@ -32,17 +32,17 @@ def layout(*args):
         bottom=0,
         margin=px(0, 0, 0, 0),
         width=percent(100),
-        color="black",
+        color="orange",
         text_align="center",
         height="auto",
-        opacity=1
+        opacity=0.5
     )
 
     style_hr = styles(
         display="block",
-        margin=px(8, 8, "auto", "auto"),
+        margin=px(4, 4, "auto", "auto"),
         border_style="inset",
-        border_width=px(2)
+        border_width=px(1)
     )
 
     body = p()
@@ -67,10 +67,7 @@ def layout(*args):
 
 def footer():
     myargs = [
-        "Made with ",
-        image('a.png',  # Example heart image
-              width=px(15), height=px(15)),
-        " ",
+        "",
         link("https://aggrekoets.com/", "© Aggreko Energy Transition Solutions 2024"),
     ]
     layout(*myargs)
