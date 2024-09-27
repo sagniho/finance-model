@@ -373,7 +373,7 @@ def generate_revenue_table(project_data, rent_option, state):
 
 # Main application function
 def main():
-    st.set_page_config(page_title='C&I PPA Model', page_icon='logo.png', layout='wide')
+    st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
 
     
     # Retrieve credentials from st.secrets
