@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
-# Import htbuilder components
 from htbuilder import HtmlElement, div, ul, li, br, hr, a, p, img, styles, classes, fonts
 from htbuilder.units import percent, px
 from htbuilder.funcs import rgba, rgb
@@ -32,7 +31,7 @@ def layout(*args):
         bottom=0,
         margin=px(0, 0, 0, 0),
         width=percent(100),
-        color="orange",
+        color="black",
         text_align="center",
         height="auto",
         opacity=1
@@ -67,7 +66,7 @@ def layout(*args):
 
 def footer():
     myargs = [
-        "C&I PPA Model - an AETS tool",
+        "C&I PPA Model - an AETS tool ",
         link("https://aggrekoets.com/", "© Aggreko Energy Transition Solutions 2024"),
     ]
     layout(*myargs)
@@ -440,6 +439,8 @@ def generate_revenue_table(project_data, rent_option, state):
 # Main application function
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
+    st.title('C&I PPA Model')
+    st.image('logo.png', width=150)
 
     
     # Retrieve credentials from st.secrets
@@ -484,8 +485,6 @@ def main():
             user_type = 'user'
             
 
-        st.image('logo.png', width=150)
-        st.title('C&I PPA Model')
 
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
