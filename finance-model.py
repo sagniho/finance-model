@@ -482,6 +482,8 @@ def main():
             ppa_escalation_start_year = st.number_input('PPA Escalation Start Year', value=2, min_value=1, disabled=disabled_input)
             ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=disabled_input)
             merchant_price_start = st.number_input('Initial Merchant Price ($/MWh)', value=55.0, min_value=0.0, disabled=disabled_input)
+            discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
+
 
         # Collect project data inputs
         project_data = {
@@ -526,7 +528,7 @@ def main():
             'rent_option': rent_option,
             'avoided_cost_ppa_price': avoided_cost_ppa_price,
             'avoided_cost_escalation': avoided_cost_escalation,
-             'other_asset_management_cost': other_asset_management_cost,
+            'other_asset_management_cost': other_asset_management_cost,
             'other_asset_management_escalation': other_asset_management_escalation,
             'discount_rate': discount_rate
         }
