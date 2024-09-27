@@ -18,7 +18,7 @@ def add_custom_footer():
     footer_html = """
     <div style='text-align: center; padding: 10px;'>
         <hr style='margin: 0;'>
-        <small>Aggreko Energy Transition Solutions 2024</small>
+        <small>© Aggreko Energy Transition Solutions 2024</small>
     </div>
     """
     st.markdown(footer_html, unsafe_allow_html=True)
@@ -695,7 +695,7 @@ def main():
     elif authentication_status == None:
         st.warning('Please enter your username and password')
     # Add a spacer to push the footer down
-    st.write('\n' * 10)
+    st.write('\n' * 100)
     add_custom_footer()
         
 
