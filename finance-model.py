@@ -35,7 +35,7 @@ def layout(*args):
         color="orange",
         text_align="center",
         height="auto",
-        opacity=0.5
+        opacity=1
     )
 
     style_hr = styles(
@@ -67,7 +67,7 @@ def layout(*args):
 
 def footer():
     myargs = [
-        "",
+        "C&I PPA Model - an AETS tool",
         link("https://aggrekoets.com/", "© Aggreko Energy Transition Solutions 2024"),
     ]
     layout(*myargs)
