@@ -9,19 +9,39 @@ import streamlit_authenticator as stauth
 def add_custom_footer():
     st.markdown("""
     <style>
-    /* Hide Streamlit footer */
-    footer {visibility: hidden;}
+        /* Make the main container a flexbox */
+        .reportview-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Make the content container grow to fill available space */
+        .block-container {
+            flex: 1;
+        }
+
+        /* Style for the footer */
+        .footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #f1f1f1;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Add the custom footer content
+
+    # Add the footer content
     footer_html = """
-    <div style='text-align: center; padding: 10px;'>
-        <hr style='margin: 0;'>
-        <small>© Aggreko Energy Transition Solutions 2024</small>
+    <div class="footer">
+        <hr>
+        <p>Aggreko Energy Transition Solutions 2024</p>
     </div>
     """
     st.markdown(footer_html, unsafe_allow_html=True)
+
 
 merchant_price_curves = {
     'NY': {
