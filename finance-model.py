@@ -6,6 +6,30 @@ import plotly.graph_objects as go
 from datetime import datetime
 import streamlit_authenticator as stauth
 
+merchant_price_curves = {
+    'NY': {
+        'years': list(range(2024, 2071)),
+        'prices': [
+            55.00, 55.83, 56.66, 57.51, 58.37, 59.25, 60.14, 61.04, 61.96, 62.89,
+            63.83, 64.79, 65.76, 66.75, 67.75, 68.76, 69.79, 70.84, 71.90, 72.98,
+            74.08, 75.19, 76.32, 77.46, 78.62, 79.80, 81.00, 82.21, 83.45, 84.70,
+            85.97, 87.26, 88.57, 89.90, 91.24, 92.61, 94.00, 95.41, 96.84, 98.30,
+            99.77, 101.27, 102.79, 104.33, 105.89, 107.48, 109.09
+        ]
+    },
+    'CA': {
+        'years': list(range(2024, 2071)),
+        'prices': [50 + i * 0.85 for i in range(47)]  # Sample escalating prices
+    },
+    'IL': {
+        'years': list(range(2024, 2071)),
+        'prices': [45 + i * 0.75 for i in range(47)]  # Sample escalating prices
+    },
+    'TX': {
+        'years': list(range(2024, 2071)),
+        'prices': [40 + i * 0.65 for i in range(47)]  # Sample escalating prices
+    }
+}
 
 
 def format_hover_value(value):
@@ -83,17 +107,25 @@ def calculate_annual_production(project_data, year):
     net_production = initial_production * degradation_factor
     return net_production
 
-def calculate_revenue(project_data, year):
+def calculate_revenue(project_data, year, state):
     net_production = calculate_annual_production(project_data, year)
-    if year <= project_data['ppa_tenor']+1:
+    if year <= project_data['ppa_tenor'] + 1:
         # PPA price starts at initial rate and escalates annually
         ppa_price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
         revenue = net_production * ppa_price / 1000  # Convert to MWh
     else:
-        merchant_price = project_data['merchant_price_start'] * (1 + project_data['merchant_escalation_rate']) ** (year)
+        # Use merchant price from the selected state's price curve
+        merchant_year = project_data['construction_start'].year + year - 1
+        try:
+            index = merchant_price_curves[state]['years'].index(merchant_year)
+            merchant_price = merchant_price_curves[state]['prices'][index]
+        except ValueError:
+            # If the year is not in the merchant price curve, use the last available price
+            merchant_price = merchant_price_curves[state]['prices'][-1]
         revenue = net_production * merchant_price / 1000
 
     return revenue
+
 
 def calculate_operating_expenses(project_data, year, rent_option):
     if year == 0:
@@ -188,24 +220,24 @@ def calculate_tax_equity(project_data):
     return {'itc': itc, 'fmv': fmv, 'te_investment': te_investment}
 
 
-def calculate_cash_flows(project_data, rent_option):
+def calculate_cash_flows(project_data, rent_option, state):
     capex = calculate_capex(project_data)
     tax_equity = calculate_tax_equity(project_data)
     
     cash_flows = []
-    total_years = 1 + project_data['ppa_tenor'] + project_data['post_ppa_tenor']  # 1 year construction + PPA + post-PPA
-    total_preferred_return = 0  # To track total preferred return
+    total_years = 1 + project_data['ppa_tenor'] + project_data['post_ppa_tenor']
+    total_preferred_return = 0
 
     for year in range(total_years):
         if year == 0:
             # Construction year
             revenue = 0
-            opex = calculate_operating_expenses(project_data, year, rent_option)  # Now passing rent_option
-            EBITDA = revenue - opex  # Should be negative opex
+            opex = calculate_operating_expenses(project_data, year, rent_option)
+            EBITDA = revenue - opex
             cash_flow = EBITDA - capex + tax_equity['fmv']
         else:
-            revenue = calculate_revenue(project_data, year)
-            opex = calculate_operating_expenses(project_data, year, rent_option)  # Now passing rent_option
+            revenue = calculate_revenue(project_data, year, state)
+            opex = calculate_operating_expenses(project_data, year, rent_option)
             EBITDA = revenue - opex
 
             # CapEx is zero in operating years
@@ -213,19 +245,17 @@ def calculate_cash_flows(project_data, rent_option):
 
             # Tax equity distributions
             if year <= project_data['buyout_year']:
-                te_distribution = -tax_equity['fmv'] * project_data['preferred_return']  # Negative cash flow
-                total_preferred_return += -te_distribution  # Accumulating positive amount
+                te_distribution = -tax_equity['fmv'] * project_data['preferred_return']
+                total_preferred_return += -te_distribution
             else:
                 te_distribution = 0
 
             if year == project_data['buyout_year']:
-                buyout_cost = -tax_equity['fmv'] * project_data['buyout_percentage']  # Negative cash flow
+                buyout_cost = -tax_equity['fmv'] * project_data['buyout_percentage']
             else:
                 buyout_cost = 0
 
-            # Tax equity cash flow is te_distribution + buyout_cost (both negative)
             tax_equity_cash_flow = te_distribution + buyout_cost
-
             cash_flow = EBITDA - capex_year + tax_equity_cash_flow
 
         cash_flows.append(cash_flow)
@@ -250,19 +280,17 @@ def plot_cash_flows(df):
     )
     return fig
 
-def generate_revenue_table(project_data, rent_option):
+def generate_revenue_table(project_data, rent_option, state):
     data = []
     start_year = project_data['construction_start'].year
     total_years = 1 + project_data['ppa_tenor'] + project_data['post_ppa_tenor']
-    
-    # Get CapEx and Tax Equity
     capex = calculate_capex(project_data)
     tax_equity = calculate_tax_equity(project_data)
-    total_preferred_return = 0  # To track total preferred return
+    total_preferred_return = 0
 
     for year in range(total_years):
         current_year = start_year + year
-        
+
         if year == 0:
             # Year 0 (Construction Year)
             net_production = 0
@@ -271,38 +299,37 @@ def generate_revenue_table(project_data, rent_option):
             revenue_type = 'Construction'
             savings = 0
             opex = calculate_operating_expenses(project_data, year, rent_option)
-            EBITDA = -opex  # No revenue in the construction year
-            
-            # Total cash flow for year 0
+            EBITDA = -opex
             total_cash_flow = EBITDA - capex + tax_equity['fmv']
         else:
-            # PPA or Merchant years
             net_production = calculate_annual_production(project_data, year)
-            
-            # Calculate the avoided cost price and our price
-            if year <= project_data['ppa_tenor']+1:
+
+            if year <= project_data['ppa_tenor']:
                 # PPA term
                 price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
                 avoided_price = project_data['avoided_cost_ppa_price'] * (1 + project_data['avoided_cost_escalation']) ** (year - 1)
                 revenue_type = 'PPA'
             else:
                 # Merchant years
-                # Both prices follow the same merchant curves
-                price = project_data['merchant_price_start'] * (1 + project_data['merchant_escalation_rate']) ** (year - project_data['ppa_tenor'] - 1)
-                avoided_price = price  # Same as our price after PPA tenor
+                merchant_year = start_year + year - 1
+                try:
+                    index = merchant_price_curves[state]['years'].index(merchant_year)
+                    price = merchant_price_curves[state]['prices'][index]
+                except ValueError:
+                    price = merchant_price_curves[state]['prices'][-1]
+                avoided_price = price  # After PPA, avoided cost price equals merchant price
                 revenue_type = 'Merchant'
 
             # Calculate savings
             if price != avoided_price:
                 savings = (avoided_price - price) * net_production / 1000
             else:
-                savings = 0  # No savings when prices are the same
+                savings = 0
 
-            revenue = net_production * price / 1000  # Convert kWh to MWh
+            revenue = net_production * price / 1000
             opex = calculate_operating_expenses(project_data, year, rent_option)
             EBITDA = revenue - opex
 
-            # CapEx is zero in operating years
             capex_year = 0
 
             # Tax equity distributions
@@ -317,13 +344,9 @@ def generate_revenue_table(project_data, rent_option):
             else:
                 buyout_cost = 0
 
-            # Tax equity cash flow
             tax_equity_cash_flow = te_distribution + buyout_cost
-
-            # Total cash flow for the year
             total_cash_flow = EBITDA - capex_year + tax_equity_cash_flow
 
-        # Append each year's values to the DataFrame
         data.append({
             'Year': current_year,
             'Net Production (MWh)': net_production / 1000 if year > 0 else 0,
@@ -336,19 +359,16 @@ def generate_revenue_table(project_data, rent_option):
             'Total Cash Flows ($)': total_cash_flow,
             'Savings Unlocked ($)': savings
         })
-    
+
     revenue_df = pd.DataFrame(data)
-    
-    
-    
+
     # Add totals row
     totals = revenue_df.select_dtypes(include=[np.number]).sum()
     totals['Year'] = 'Total'
     totals['Revenue Type'] = ''
     revenue_df = pd.concat([revenue_df, totals.to_frame().T], ignore_index=True)
-    
-    return revenue_df
 
+    return revenue_df
 
 # Main application function
 def main():
@@ -402,6 +422,7 @@ def main():
             # Inputs always enabled for this section
             project_size_dc = st.number_input('Project Size (MW-dc)', value=7.5, min_value=0.1, disabled=False)
             project_size_ac = st.number_input('Project Size (MW-ac)', value=5.0, min_value=0.1, disabled=False)
+            state = st.selectbox('Select State', ['NY', 'CA', 'IL', 'TX'])
             ppa_tenor = st.number_input('PPA Tenor (years)', value=20, min_value=1, max_value=30, disabled=False)
             post_ppa_tenor = st.number_input('Post-PPA Tenor (years)', value=16, min_value=0, max_value=30, disabled=False)
             itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
@@ -530,16 +551,17 @@ def main():
             'avoided_cost_escalation': avoided_cost_escalation,
             'other_asset_management_cost': other_asset_management_cost,
             'other_asset_management_escalation': other_asset_management_escalation,
-            'discount_rate': discount_rate
+            'discount_rate': discount_rate,
+            'state': state
         }
 
         if st.button('Calculate IRR'):
-            cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option)
+            cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option, state)
             irr = calculate_irr(cash_flows)
             st.success(f'The project IRR is: {irr*100:.2f}%')
 
             # Generate revenue table with operating expenses and total cash flows
-            revenue_df = generate_revenue_table(project_data, rent_option)
+            revenue_df = generate_revenue_table(project_data, rent_option, state)
 
             # Calculate NPV
             NPV = npf.npv(discount_rate, cash_flows)
