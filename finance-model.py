@@ -496,6 +496,7 @@ def main():
             project_size_dc = st.number_input('Project Size (MW-dc)', value=7.5, min_value=0.1, disabled=False)
             project_size_ac = st.number_input('Project Size (MW-ac)', value=5.0, min_value=0.1, disabled=False)
             state = st.selectbox('Select State', ['NY', 'CA', 'IL', 'TX'])
+            merchant_price_start = st.number_input('Initial Merchant Price ($/MWh)', value=55.0, min_value=0.0, disabled=disabled_input)
             ppa_tenor = st.number_input('PPA Tenor (years)', value=20, min_value=1, max_value=30, disabled=False)
             post_ppa_tenor = st.number_input('Post-PPA Tenor (years)', value=16, min_value=0, max_value=30, disabled=False)
             itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
@@ -575,7 +576,6 @@ def main():
             degradation_start_year = st.number_input('Degradation Start Year', value=1, min_value=1, disabled=disabled_input)
             ppa_escalation_start_year = st.number_input('PPA Escalation Start Year', value=2, min_value=1, disabled=disabled_input)
             ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=disabled_input)
-            merchant_price_start = st.number_input('Initial Merchant Price ($/MWh)', value=55.0, min_value=0.0, disabled=disabled_input)
             discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
 
 
