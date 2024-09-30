@@ -628,7 +628,7 @@ def main():
             'state': state
         }
 
-       if st.button('Calculate IRR'):
+        if st.button('Calculate IRR'):
             cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option, state)
             irr = calculate_irr(cash_flows)
             st.success(f'The project IRR is: {irr*100:.2f}%')
@@ -749,6 +749,8 @@ def main():
         st.warning('Please enter your username and password')
 
     footer()
+
+        
 
 
    
