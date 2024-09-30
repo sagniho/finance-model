@@ -440,7 +440,7 @@ def generate_revenue_table(project_data, rent_option, state):
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
     col1, col2, col3, col4 = st.columns(4)
-    with col1:
+    with col1, col2:
         st.header('C&I PPA Model')
     with col4:
         st.image('logo.png', width=150)
@@ -630,6 +630,7 @@ def main():
             # Step 1: Calculate Cash Flows and IRR
             cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option, state)
             irr = calculate_irr(cash_flows)
+            st.success(f'The project IRR is: {irr*100:.2f}%')
             
             # Step 2: Generate Revenue Table
             revenue_df = generate_revenue_table(project_data, rent_option, state)
@@ -685,6 +686,8 @@ def main():
                 st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM")
             with col8:
                 st.metric("Payback Period", f"{payback_years} years")
+
+            st.divider()
 
 
              # Step 12: Display Revenue Table at the Bottom
