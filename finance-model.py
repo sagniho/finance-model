@@ -666,21 +666,6 @@ def main():
             #st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
             #st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
 
-            
-            
-
-            st.subheader("Annual Project Details")
-            st.dataframe(revenue_df.style.format({
-                'Net Production (MWh)': '{:,.0f}',
-                'Our Price ($/MWh)': '${:,.2f}',
-                'Avoided Cost Price ($/MWh)': '${:,.2f}',
-                'Revenue ($)': lambda x: format_hover_value(x),
-                'Operating Expenses ($)': lambda x: format_hover_value(x),
-                'EBITDA ($)': lambda x: format_hover_value(x),
-                'Total Cash Flows ($)': lambda x: format_hover_value(x),
-                'Savings Unlocked ($)': lambda x: format_hover_value(x),
-            }))
-
 
 
             # Calculate and display metrics
@@ -723,6 +708,24 @@ def main():
                 st.metric("Remaining ITC Cash Flows after Buyout", f"${remaining_itc_cash_flows / 1e6:,.0f}MM")
             with col3: 
                 st.metric("NPV", f"${NPV / 1e6:,.2f}MM")
+
+
+            
+            
+            
+
+            st.subheader("Annual Project Details")
+            st.dataframe(revenue_df.style.format({
+                'Net Production (MWh)': '{:,.0f}',
+                'Our Price ($/MWh)': '${:,.2f}',
+                'Avoided Cost Price ($/MWh)': '${:,.2f}',
+                'Revenue ($)': lambda x: format_hover_value(x),
+                'Operating Expenses ($)': lambda x: format_hover_value(x),
+                'EBITDA ($)': lambda x: format_hover_value(x),
+                'Total Cash Flows ($)': lambda x: format_hover_value(x),
+                'Savings Unlocked ($)': lambda x: format_hover_value(x),
+            }))
+
 
 
 
