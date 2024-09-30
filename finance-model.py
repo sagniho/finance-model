@@ -329,13 +329,7 @@ def calculate_cash_flows(project_data, rent_option, state):
             cash_flow = EBITDA - capex + tax_equity['fmv']
         else:
             revenue, revenue_type = calculate_revenue(project_data, year, state)
-            if not isinstance(revenue, (int, float)):
-                st.error(f"Invalid revenue type in year {year}: {revenue}")
-                return [], 0
             opex = calculate_operating_expenses(project_data, year, rent_option)
-            if not isinstance(opex, (int, float)):
-                st.error(f"Invalid operating expenses in year {year}: {opex}")
-                return [], 0
             EBITDA = revenue - opex
 
             # CapEx is zero in operating years
@@ -361,7 +355,6 @@ def calculate_cash_flows(project_data, rent_option, state):
     remaining_itc_cash_flows = tax_equity['fmv'] - total_preferred_return - (tax_equity['fmv'] * project_data['buyout_percentage'])
 
     return cash_flows, remaining_itc_cash_flows
-
 
 
 def calculate_irr(cash_flows):
