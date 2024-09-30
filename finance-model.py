@@ -1,4 +1,3 @@
-in the revenue table, we want to show revenue tyoe as "PPA + REC" or "Merchant + REC" where 
 import streamlit as st
 import numpy as np
 import numpy_financial as npf
