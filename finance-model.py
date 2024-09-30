@@ -543,19 +543,19 @@ def main():
                 "REC Price for Year 1-5 ($/MWh)",
                 value=20.0,  # Default value; adjust as needed
                 min_value=0.0,
-                step=1
+                step=1.0
             )
             rec_price_year_6_10 = st.number_input(
                 "REC Price for Year 6-10 ($/MWh)",
                 value=15.0,  # Default value; adjust as needed
                 min_value=0.0,
-                step=1
+                step=1.0
             )
             rec_price_year_11_15 = st.number_input(
                 "REC Price for Year 11-15 ($/MWh)",
                 value=10.0,  # Default value; adjust as needed
                 min_value=0.0,
-                step=1
+                step=1.0
             )
         
             # Rent option toggle for both construction and operating rents (now a radio button)
