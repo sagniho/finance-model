@@ -531,94 +531,432 @@ def main():
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
             # Inputs always enabled for this section
-            project_size_dc = st.number_input('Project Size (MW-dc)', value=7.5, min_value=0.1, disabled=False)
-            project_size_ac = st.number_input('Project Size (MW-ac)', value=5.0, min_value=0.1, disabled=False)
-            state = st.selectbox('Select State', ['NY', 'CA', 'IL', 'TX'])
-            ppa_tenor = st.number_input('PPA Tenor (years)', value=20, min_value=1, max_value=30, disabled=False)
-            post_ppa_tenor = st.number_input('Post-PPA Tenor (years)', value=16, min_value=0, max_value=30, disabled=False)
-            ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=False)
-            ppa_escalation = st.number_input('PPA Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-            itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
-            avoided_cost_ppa_price = st.number_input('Avoided PPA Price ($/MWh)', value=155.0, min_value=0.0, disabled=False)
-            avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-            discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
-            production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=False)
-            rec_price_years_1_5 = st.number_input('REC Price ($/MWh) for Years 1-5', value=20.0, min_value=0.0, disabled=False)
-            rec_price_years_6_10 = st.number_input('REC Price ($/MWh) for Years 6-10', value=15.0, min_value=0.0, disabled=False)
-            rec_price_years_11_15 = st.number_input('REC Price ($/MWh) for Years 11-15', value=10.0, min_value=0.0, disabled=False)
-        
-            # Rent option toggle for both construction and operating rents (now a radio button)
-            rent_option = st.radio("Select Rent Calculation Method", 
-                                   options=["Flat Lease/Year", "$/Acre + Escalation", "$/MW-ac + Escalation"], 
-                                   index=0)  # Default selection is the first option
-        
+
+            # Project Size Inputs
+            project_size_dc = st.number_input(
+                'Project Size (MW-dc)',
+                value=7.5,
+                min_value=0.1,
+                disabled=False,
+                help='Enter the DC size of the project in megawatts.'
+            )
+            project_size_ac = st.number_input(
+                'Project Size (MW-ac)',
+                value=5.0,
+                min_value=0.1,
+                disabled=False,
+                help='Enter the AC size of the project in megawatts.'
+            )
+            state = st.selectbox(
+                'Select State',
+                ['NY', 'CA', 'IL', 'TX'],
+                help='Select the state where the project is located.'
+            )
+            # PPA Inputs
+            ppa_tenor = st.number_input(
+                'PPA Tenor (years)',
+                value=20,
+                min_value=1,
+                max_value=30,
+                disabled=False,
+                help='Enter the duration of the Power Purchase Agreement in years.'
+            )
+            post_ppa_tenor = st.number_input(
+                'Post-PPA Tenor (years)',
+                value=16,
+                min_value=0,
+                max_value=30,
+                disabled=False,
+                help='Enter the number of years after the PPA term.'
+            )
+            ppa_rate = st.number_input(
+                'Initial PPA Rate ($/MWh)',
+                value=114.05,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the starting price per MWh for the PPA.'
+            )
+            ppa_escalation = st.number_input(
+                'PPA Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=False,
+                help='Enter the annual escalation rate for the PPA price.'
+            ) / 100
+            itc_amount = st.number_input(
+                'ITC Amount (%)',
+                value=30.0,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=False,
+                help='Enter the Investment Tax Credit percentage available for the project.'
+            ) / 100
+            avoided_cost_ppa_price = st.number_input(
+                'Avoided PPA Price ($/MWh)',
+                value=155.0,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the avoided cost price per MWh during the PPA term.'
+            )
+            avoided_cost_escalation = st.number_input(
+                'Avoided Cost Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=False,
+                help='Enter the annual escalation rate for the avoided cost price.'
+            ) / 100
+            discount_rate = st.number_input(
+                'Discount Rate for NPV and LCOE (%)',
+                value=8.0,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=False,
+                help='Enter the discount rate used for NPV and LCOE calculations.'
+            ) / 100
+            production_yield = st.number_input(
+                'Production Yield (kWh/kWp)',
+                value=1350,
+                min_value=500,
+                max_value=2500,
+                disabled=False,
+                help='Enter the annual energy production per kWp installed capacity.'
+            )
+            # REC Price Inputs
+            rec_price_years_1_5 = st.number_input(
+                'REC Price ($/MWh) for Years 1-5',
+                value=20.0,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the REC price per MWh for years 1 to 5.'
+            )
+            rec_price_years_6_10 = st.number_input(
+                'REC Price ($/MWh) for Years 6-10',
+                value=15.0,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the REC price per MWh for years 6 to 10.'
+            )
+            rec_price_years_11_15 = st.number_input(
+                'REC Price ($/MWh) for Years 11-15',
+                value=10.0,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the REC price per MWh for years 11 to 15.'
+            )
+
+            # Rent option toggle
+            rent_option = st.radio(
+                "Select Rent Calculation Method",
+                options=["Flat Lease/Year", "$/Acre + Escalation", "$/MW-ac + Escalation"],
+                index=0,
+                help='Choose the method for calculating land rent.'
+            )
+
             # Initialize site_acres to a default value
             site_acres = 0
-        
+
             # Construction Rent inputs based on the selected rent option
             if rent_option == "Flat Lease/Year":
-                construction_rent = st.number_input('Construction Rent (Flat $/year)', value=50000.0, min_value=0.0, disabled=False)
-                operating_rent = st.number_input('Operating Rent (Flat $/year)', value=36000.0, min_value=0.0, disabled=False)
-                rent_escalation = st.number_input('Flat Lease Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-        
-            elif rent_option == "$/Acre + Escalation":
-                construction_rent = st.number_input('Construction Rent ($/acre/year)', value=600.0, min_value=0.0, disabled=False)
-                operating_rent = st.number_input('Operating Rent ($/acre/year)', value=1200.0, min_value=0.0, disabled=False)
-                rent_escalation = st.number_input('Rent Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
-                site_acres = st.number_input('Site Acres', value=30.0, min_value=0.1, disabled=False)  # Only defined here
-        
-            elif rent_option == "$/MW-ac + Escalation":
-                construction_rent = st.number_input('Construction Rent ($/MW-ac/year)', value=8000.0, min_value=0.0, disabled=False)
-                operating_rent = st.number_input('Operating Rent ($/MW-ac/year)', value=25000.0, min_value=0.0, disabled=False)
-                rent_escalation = st.number_input('MW-ac Rent Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
+                construction_rent = st.number_input(
+                    'Construction Rent (Flat $/year)',
+                    value=50000.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the flat construction rent per year.'
+                )
+                operating_rent = st.number_input(
+                    'Operating Rent (Flat $/year)',
+                    value=36000.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the flat operating rent per year.'
+                )
+                rent_escalation = st.number_input(
+                    'Flat Lease Escalation (%)',
+                    value=2.0,
+                    min_value=0.0,
+                    max_value=10.0,
+                    disabled=False,
+                    help='Enter the annual escalation rate for flat lease.'
+                ) / 100
 
+            elif rent_option == "$/Acre + Escalation":
+                construction_rent = st.number_input(
+                    'Construction Rent ($/acre/year)',
+                    value=600.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the construction rent per acre per year.'
+                )
+                operating_rent = st.number_input(
+                    'Operating Rent ($/acre/year)',
+                    value=1200.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the operating rent per acre per year.'
+                )
+                rent_escalation = st.number_input(
+                    'Rent Escalation (%)',
+                    value=2.0,
+                    min_value=0.0,
+                    max_value=10.0,
+                    disabled=False,
+                    help='Enter the annual escalation rate for rent per acre.'
+                ) / 100
+                site_acres = st.number_input(
+                    'Site Acres',
+                    value=30.0,
+                    min_value=0.1,
+                    disabled=False,
+                    help='Enter the total site area in acres.'
+                )
+
+            elif rent_option == "$/MW-ac + Escalation":
+                construction_rent = st.number_input(
+                    'Construction Rent ($/MW-ac/year)',
+                    value=8000.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the construction rent per MW-ac per year.'
+                )
+                operating_rent = st.number_input(
+                    'Operating Rent ($/MW-ac/year)',
+                    value=25000.0,
+                    min_value=0.0,
+                    disabled=False,
+                    help='Enter the operating rent per MW-ac per year.'
+                )
+                rent_escalation = st.number_input(
+                    'MW-ac Rent Escalation (%)',
+                    value=2.0,
+                    min_value=0.0,
+                    max_value=10.0,
+                    disabled=False,
+                    help='Enter the annual escalation rate for rent per MW-ac.'
+                ) / 100
 
         with st.sidebar.expander("Schedule", expanded=True):
-            cod_date = st.date_input('Commercial Operation Date', value=datetime(2025, 12, 31), disabled=False)
-            construction_start = st.date_input('Construction Start', value=datetime(2024, 12, 31), disabled=False)
-
+            cod_date = st.date_input(
+                'Commercial Operation Date',
+                value=datetime(2025, 12, 31),
+                disabled=False,
+                help='Select the expected Commercial Operation Date (COD).'
+            )
+            construction_start = st.date_input(
+                'Construction Start',
+                value=datetime(2024, 12, 31),
+                disabled=False,
+                help='Select the expected construction start date.'
+            )
 
         # For other sections, inputs are disabled for 'user' type
         disabled_input = (user_type == 'user')
 
-       
-            
-
         with st.sidebar.expander("OpEx Inputs", expanded=False):
-            opex_escalation = st.number_input('OpEx Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            om_cost = st.number_input('O&M Cost ($/kW/year)', value=6.00, min_value=0.0, disabled=disabled_input)
-            om_escalation = st.number_input('O&M Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            asset_management_cost = st.number_input('Asset Management Cost ($/kW/year)', value=2.00, min_value=0.0, disabled=disabled_input)
-            asset_management_escalation = st.number_input('Asset Management Escalation (%)', value=1.5, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            insurance_cost = st.number_input('Insurance Cost ($/kW/year)', value=4.50, min_value=0.0, disabled=disabled_input)
-            property_tax = st.number_input('Property Tax ($/acre/year)', value=1200.00, min_value=0.0, disabled=disabled_input)
-            property_tax_escalation = st.number_input('Property Tax Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            other_asset_management_cost = st.number_input('Other Asset Management Cost ($/kW/year)', value=5.00, min_value=0.0, disabled=disabled_input)
-            other_asset_management_escalation = st.number_input('Other Asset Management Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            inverter_replacement_cost = st.number_input('Inverter Replacement Cost ($/kW/year)', value=4.00, min_value=0.0, disabled=disabled_input)
-            tax_rate = st.number_input('Tax Rate (%)', value=21.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
-            developer_fee = st.number_input('Developer Fee ($/W-dc)', value=0.25, min_value=0.0, max_value=1.0, disabled=disabled_input)
+            # Operating Expenses Inputs
+            opex_escalation = st.number_input(
+                'OpEx Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=disabled_input,
+                help='Enter the annual escalation rate for operating expenses.'
+            ) / 100
+            om_cost = st.number_input(
+                'O&M Cost ($/kW/year)',
+                value=6.00,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter the annual Operations & Maintenance cost per kW.'
+            )
+            om_escalation = st.number_input(
+                'O&M Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=disabled_input,
+                help='Enter the annual escalation rate for O&M costs.'
+            ) / 100
+            asset_management_cost = st.number_input(
+                'Asset Management Cost ($/kW/year)',
+                value=2.00,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter the annual asset management cost per kW.'
+            )
+            asset_management_escalation = st.number_input(
+                'Asset Management Escalation (%)',
+                value=1.5,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=disabled_input,
+                help='Enter the annual escalation rate for asset management costs.'
+            ) / 100
+            insurance_cost = st.number_input(
+                'Insurance Cost ($/kW/year)',
+                value=4.50,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter the annual insurance cost per kW.'
+            )
+            property_tax = st.number_input(
+                'Property Tax ($/acre/year)',
+                value=1200.00,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter the annual property tax per acre.'
+            )
+            property_tax_escalation = st.number_input(
+                'Property Tax Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=disabled_input,
+                help='Enter the annual escalation rate for property taxes.'
+            ) / 100
+            other_asset_management_cost = st.number_input(
+                'Other Asset Management Cost ($/kW/year)',
+                value=5.00,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter any other annual asset management costs per kW.'
+            )
+            other_asset_management_escalation = st.number_input(
+                'Other Asset Management Escalation (%)',
+                value=2.0,
+                min_value=0.0,
+                max_value=10.0,
+                disabled=disabled_input,
+                help='Enter the annual escalation rate for other asset management costs.'
+            ) / 100
+            inverter_replacement_cost = st.number_input(
+                'Inverter Replacement Cost ($/kW/year)',
+                value=4.00,
+                min_value=0.0,
+                disabled=disabled_input,
+                help='Enter the annual cost for inverter replacements per kW.'
+            )
+            tax_rate = st.number_input(
+                'Tax Rate (%)',
+                value=21.0,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=disabled_input,
+                help='Enter the applicable tax rate.'
+            ) / 100
+            developer_fee = st.number_input(
+                'Developer Fee ($/W-dc)',
+                value=0.25,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=disabled_input,
+                help='Enter the developer fee per W-dc.'
+            )
 
         with st.sidebar.expander("CapEx Inputs", expanded=False):
-            epc_cost = st.number_input('EPC Cost ($/W-dc)', value=1.65, min_value=0.0, max_value=5.0, disabled=disabled_input)
-            interconnection_cost = st.number_input('Interconnection Cost ($/W-dc)', value=0.10, min_value=0.0, max_value=1.0, disabled=disabled_input)
-            transaction_costs = st.number_input('Transaction Costs ($/W-dc)', value=0.07, min_value=0.0, max_value=1.0, disabled=disabled_input)
+            # Capital Expenditure Inputs
+            epc_cost = st.number_input(
+                'EPC Cost ($/W-dc)',
+                value=1.65,
+                min_value=0.0,
+                max_value=5.0,
+                disabled=disabled_input,
+                help='Enter the Engineering, Procurement, and Construction cost per W-dc.'
+            )
+            interconnection_cost = st.number_input(
+                'Interconnection Cost ($/W-dc)',
+                value=0.10,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=disabled_input,
+                help='Enter the interconnection cost per W-dc.'
+            )
+            transaction_costs = st.number_input(
+                'Transaction Costs ($/W-dc)',
+                value=0.07,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=disabled_input,
+                help='Enter any additional transaction costs per W-dc.'
+            )
 
         with st.sidebar.expander("Tax Equity Inputs", expanded=False):
-            itc_eligible_portion = st.number_input('ITC-Eligible Portion (%)', value=95.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
-            fmv_step_up = st.number_input('FMV Step-up (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
-            te_investment = st.number_input('TE Investment ($ of ITC)', value=1.15, min_value=0.0, max_value=5.0, disabled=disabled_input)
-            preferred_return = st.number_input('Preferred Return (%)', value=2.5, min_value=0.0, max_value=20.0, disabled=disabled_input) / 100
-            buyout_year = st.number_input('Buyout Year', value=7, min_value=1, max_value=20, disabled=disabled_input)
-            buyout_percentage = st.number_input('Buyout (%)', value=7.25, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
-
+            # Tax Equity Financing Inputs
+            itc_eligible_portion = st.number_input(
+                'ITC-Eligible Portion (%)',
+                value=95.0,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=disabled_input,
+                help='Enter the percentage of CapEx that is eligible for ITC.'
+            ) / 100
+            fmv_step_up = st.number_input(
+                'FMV Step-up (%)',
+                value=30.0,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=disabled_input,
+                help='Enter the percentage increase in Fair Market Value (FMV) due to step-up.'
+            ) / 100
+            te_investment = st.number_input(
+                'TE Investment ($ of ITC)',
+                value=1.15,
+                min_value=0.0,
+                max_value=5.0,
+                disabled=disabled_input,
+                help='Enter the amount of Tax Equity Investment per dollar of ITC.'
+            )
+            preferred_return = st.number_input(
+                'Preferred Return (%)',
+                value=2.5,
+                min_value=0.0,
+                max_value=20.0,
+                disabled=disabled_input,
+                help='Enter the preferred return rate for tax equity investors.'
+            ) / 100
+            buyout_year = st.number_input(
+                'Buyout Year',
+                value=7,
+                min_value=1,
+                max_value=20,
+                disabled=disabled_input,
+                help='Enter the year in which the buyout option is exercised.'
+            )
+            buyout_percentage = st.number_input(
+                'Buyout (%)',
+                value=7.25,
+                min_value=0.0,
+                max_value=100.0,
+                disabled=disabled_input,
+                help='Enter the percentage of FMV for the buyout price.'
+            ) / 100
 
         with st.sidebar.expander("Other Parameters", expanded=False):
-            degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.5, min_value=0.0, max_value=5.0, disabled=disabled_input) / 100
-            degradation_start_year = st.number_input('Degradation Start Year', value=1, min_value=1, disabled=disabled_input)
-            ppa_escalation_start_year = st.number_input('PPA Escalation Start Year', value=2, min_value=1, disabled=disabled_input)
-            
-            
+            # Additional Parameters
+            degradation_rate = st.number_input(
+                'Annual Degradation Rate (%)',
+                value=0.5,
+                min_value=0.0,
+                max_value=5.0,
+                disabled=disabled_input,
+                help='Enter the annual degradation rate of the solar panels.'
+            ) / 100
+            degradation_start_year = st.number_input(
+                'Degradation Start Year',
+                value=1,
+                min_value=1,
+                disabled=disabled_input,
+                help='Enter the year when degradation starts.'
+            )
+            ppa_escalation_start_year = st.number_input(
+                'PPA Escalation Start Year',
+                value=2,
+                min_value=1,
+                disabled=disabled_input,
+                help='Enter the year when PPA price escalation starts.'
+            )
 
         # Collect project data inputs
         project_data = {
@@ -708,28 +1046,29 @@ def main():
             # (If 'Saved NPV' has a different definition, adjust accordingly)
 
             # Display Key Metrics
+            
             st.subheader("Key Metrics")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Unlevered IRR", f"{irr*100:.2f}%")
+                st.metric("Unlevered IRR", f"{irr*100:.2f}%", help='Internal Rate of Return without considering debt financing.')
             with col2:
                 total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
-                st.metric("Revenue", f"${total_revenue / 1e6:,.2f}MM")
+                st.metric("Total Revenue", f"${total_revenue / 1e6:,.2f}MM", help='Total revenue over the project lifetime.')
             with col3:
                 total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
-                st.metric("EBITDA", f"${total_ebitda / 1e6:,.2f}MM")
+                st.metric("Total EBITDA", f"${total_ebitda / 1e6:,.2f}MM", help='Earnings Before Interest, Taxes, Depreciation, and Amortization over the project lifetime.')
             with col4:
-                st.metric("Unlevered CapEx", f"${unlevered_capex / 1e6:,.2f}MM")
+                st.metric("Unlevered CapEx", f"${unlevered_capex / 1e6:,.2f}MM", help='Total capital expenditure minus tax equity FMV.')
 
             col5, col6, col7, col8 = st.columns(4)
             with col5:
-                st.metric("NPV", f"${NPV / 1e6:,.2f}MM")
+                st.metric("NPV", f"${NPV / 1e6:,.2f}MM", help='Net Present Value of the project.')
             with col6:
-                st.metric("Saved NPV", f"${saved_NPV / 1e6:,.2f}MM")
+                st.metric("Saved NPV", f"${saved_NPV / 1e6:,.2f}MM", help='Increase in NPV due to tax equity financing.')
             with col7:
-                st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM")
+                st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM", help='Total savings unlocked for the customer.')
             with col8:
-                st.metric("Payback Period", f"{payback_years} years")
+                st.metric("Payback Period", f"{payback_years} years", help='Number of years to recover the initial investment.')
 
             st.divider()
 
