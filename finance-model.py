@@ -664,7 +664,7 @@ def main():
 
             # Display Key Metrics
             st.subheader("Key Metrics")
-            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("IRR", f"{irr*100:.2f}%")
             with col2:
@@ -675,6 +675,8 @@ def main():
                 st.metric("EBITDA", f"${total_ebitda / 1e6:,.2f}MM")
             with col4:
                 st.metric("Unlevered CapEx", f"${unlevered_capex / 1e6:,.2f}MM")
+
+            col5, col6, col7, col8 = st.columns(4)
             with col5:
                 st.metric("NPV", f"${NPV / 1e6:,.2f}MM")
             with col6:
@@ -683,6 +685,21 @@ def main():
                 st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM")
             with col8:
                 st.metric("Payback Period", f"{payback_years} years")
+
+
+             # Step 12: Display Revenue Table at the Bottom
+            st.subheader("Annual Project Details")
+            st.dataframe(revenue_df.style.format({
+                'Net Production (MWh)': '{:,.0f}',
+                'Our Price ($/MWh)': '${:,.2f}',
+                'Avoided Cost Price ($/MWh)': '${:,.2f}',
+                'Revenue ($)': lambda x: format_hover_value(x),
+                'Operating Expenses ($)': lambda x: format_hover_value(x),
+                'EBITDA ($)': lambda x: format_hover_value(x),
+                'Total Cash Flows ($)': lambda x: format_hover_value(x),
+                'Savings Unlocked ($)': lambda x: format_hover_value(x),
+            }))
+
 
            
             # Step 10: Plot Cash Flows
@@ -696,19 +713,7 @@ def main():
             # Step 11: Plot Stacked Savings Chart
             st.plotly_chart(plot_stacked_savings_chart(revenue_df))
 
-            # Step 12: Display Revenue Table at the Bottom
-            st.subheader("Annual Project Details")
-            st.dataframe(revenue_df.style.format({
-                'Net Production (MWh)': '{:,.0f}',
-                'Our Price ($/MWh)': '${:,.2f}',
-                'Avoided Cost Price ($/MWh)': '${:,.2f}',
-                'Revenue ($)': lambda x: format_hover_value(x),
-                'Operating Expenses ($)': lambda x: format_hover_value(x),
-                'EBITDA ($)': lambda x: format_hover_value(x),
-                'Total Cash Flows ($)': lambda x: format_hover_value(x),
-                'Savings Unlocked ($)': lambda x: format_hover_value(x),
-            }))
-
+           
             # Optional: Provide a download button for the revenue table
             csv = revenue_df.to_csv(index=False)
             st.download_button(
