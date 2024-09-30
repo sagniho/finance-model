@@ -628,7 +628,7 @@ def main():
             # Step 1: Calculate Cash Flows and IRR
             cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option, state)
             irr = calculate_irr(cash_flows)
-            st.success(f'The project IRR is: {irr*100:.2f}%')
+            st.success(f'The project Unlevered IRR is: {irr*100:.2f}%')
             
             # Step 2: Generate Revenue Table
             revenue_df = generate_revenue_table(project_data, rent_option, state)
@@ -665,7 +665,7 @@ def main():
             st.subheader("Key Metrics")
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("IRR", f"{irr*100:.2f}%")
+                st.metric("Unlevered IRR", f"{irr*100:.2f}%")
             with col2:
                 total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
                 st.metric("Revenue", f"${total_revenue / 1e6:,.2f}MM")
