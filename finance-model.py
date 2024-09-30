@@ -205,6 +205,7 @@ def calculate_revenue(project_data, year, state):
             rec_price = 0  # No REC revenue after year 15
     else:
         rec_price = 0  # No production in construction year
+    print(f"Year {year}: REC price is {rec_price}")
 
     total_price = price + rec_price
     revenue = net_production * total_price / 1000  # Convert to MWh
