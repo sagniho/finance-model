@@ -95,6 +95,10 @@ merchant_price_curves = {
     'TX': {
         'years': list(range(2024, 2071)),
         'prices': [40 + i * 0.65 for i in range(47)]  # Sample escalating prices
+    },
+    'NJ': {
+        'years': list(range(2024, 2071)),
+        'prices': [58 + i * 0.35 for i in range(47)]  # Sample escalating prices
     }
 }
 
