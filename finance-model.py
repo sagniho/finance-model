@@ -176,12 +176,15 @@ def calculate_annual_production(project_data, year):
 
 def calculate_revenue(project_data, year, state):
     net_production = calculate_annual_production(project_data, year)
+    
+    # Determine Revenue Type and PPA/Merchant Revenue
     if year <= project_data['ppa_tenor'] + 1:
-        # PPA price starts at initial rate and escalates annually
+        # PPA Years
         ppa_price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
-        revenue = net_production * ppa_price / 1000  # Convert to MWh
+        revenue_type = "PPA + REC"
+        revenue_purs = "PPA"
     else:
-        # Use merchant price from the selected state's price curve
+        # Merchant Years
         merchant_year = project_data['construction_start'].year + year - 1
         try:
             index = merchant_price_curves[state]['years'].index(merchant_year)
@@ -189,9 +192,31 @@ def calculate_revenue(project_data, year, state):
         except ValueError:
             # If the year is not in the merchant price curve, use the last available price
             merchant_price = merchant_price_curves[state]['prices'][-1]
-        revenue = net_production * merchant_price / 1000
+        ppa_price = merchant_price
+        revenue_type = "Merchant + REC"
+        revenue_purs = "Merchant"
+    
+    # Calculate PPA/Merchant Revenue
+    revenue_purs_revenue = net_production * ppa_price / 1000  # Convert to MWh
+    
+    # Determine REC Price based on Year
+    if 1 <= year <= 5:
+        rec_price = project_data['rec_price_year_1_5']
+    elif 6 <= year <= 10:
+        rec_price = project_data['rec_price_year_6_10']
+    elif 11 <= year <= 15:
+        rec_price = project_data['rec_price_year_11_15']
+    else:
+        rec_price = project_data['rec_price_year_11_15']  # Use Year 15 price for years beyond 15
+    
+    # Calculate REC Revenue
+    rec_revenue = net_production * rec_price / 1000  # Convert to MWh
+    
+    # Total Revenue
+    total_revenue = revenue_purs_revenue + rec_revenue
+    
+    return total_revenue, revenue_type
 
-    return revenue
 
 
 def calculate_operating_expenses(project_data, year, rent_option):
@@ -366,37 +391,38 @@ def generate_revenue_table(project_data, rent_option, state):
             revenue_type = 'Construction'
             savings = 0
             opex = calculate_operating_expenses(project_data, year, rent_option)
-            EBITDA = -opex
+            EBITDA = revenue - opex if 'revenue' in locals() else -opex
             total_cash_flow = EBITDA - capex + tax_equity['fmv']
         else:
+            total_revenue, revenue_type = calculate_revenue(project_data, year, state)
             net_production = calculate_annual_production(project_data, year)
-
-            if year <= project_data['ppa_tenor']:
-                # PPA term
-                price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
+            
+            # PPA or Merchant Price
+            if revenue_type.startswith("PPA"):
+                ppa_or_merchant_price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
                 avoided_price = project_data['avoided_cost_ppa_price'] * (1 + project_data['avoided_cost_escalation']) ** (year - 1)
-                revenue_type = 'PPA'
             else:
-                # Merchant years
-                merchant_year = start_year + year - 1
+                merchant_year = project_data['construction_start'].year + year - 1
                 try:
                     index = merchant_price_curves[state]['years'].index(merchant_year)
-                    price = merchant_price_curves[state]['prices'][index]
+                    ppa_or_merchant_price = merchant_price_curves[state]['prices'][index]
                 except ValueError:
-                    price = merchant_price_curves[state]['prices'][-1]
-                avoided_price = price  # After PPA, avoided cost price equals merchant price
-                revenue_type = 'Merchant'
+                    ppa_or_merchant_price = merchant_price_curves[state]['prices'][-1]
+                avoided_price = ppa_or_merchant_price  # After PPA, avoided cost price equals merchant price
 
-            # Calculate savings
-            if price != avoided_price:
-                savings = (avoided_price - price) * net_production / 1000
+            # Calculate Savings
+            if ppa_or_merchant_price != avoided_price:
+                savings = (avoided_price - ppa_or_merchant_price) * net_production / 1000
             else:
                 savings = 0
 
-            revenue = net_production * price / 1000
+            # Operating Expenses
             opex = calculate_operating_expenses(project_data, year, rent_option)
-            EBITDA = revenue - opex
 
+            # EBITDA
+            EBITDA = total_revenue - opex
+
+            # CapEx is zero in operating years
             capex_year = 0
 
             # Tax equity distributions
@@ -414,13 +440,21 @@ def generate_revenue_table(project_data, rent_option, state):
             tax_equity_cash_flow = te_distribution + buyout_cost
             total_cash_flow = EBITDA - capex_year + tax_equity_cash_flow
 
+            # Calculate REC Revenue
+            if revenue_type == "PPA + REC":
+                rec_revenue = total_revenue - (net_production * ppa_or_merchant_price / 1000)
+            elif revenue_type == "Merchant + REC":
+                rec_revenue = total_revenue - (net_production * ppa_or_merchant_price / 1000)
+            else:
+                rec_revenue = 0  # For any other revenue types
+
         data.append({
             'Year': current_year,
             'Net Production (MWh)': net_production / 1000 if year > 0 else 0,
-            'Our Price ($/MWh)': price if year > 0 else 0,
+            'Our Price ($/MWh)': ppa_or_merchant_price if year > 0 else 0,
             'Avoided Cost Price ($/MWh)': avoided_price if year > 0 else 0,
             'Revenue Type': revenue_type,
-            'Revenue ($)': revenue if year > 0 else 0,
+            'Revenue ($)': total_revenue if year > 0 else 0,
             'Operating Expenses ($)': opex,
             'EBITDA ($)': EBITDA,
             'Total Cash Flows ($)': total_cash_flow,
@@ -436,6 +470,7 @@ def generate_revenue_table(project_data, rent_option, state):
     revenue_df = pd.concat([revenue_df, totals.to_frame().T], ignore_index=True)
 
     return revenue_df
+
 
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
@@ -503,6 +538,25 @@ def main():
             avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
             discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
             production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=False)
+            st.markdown("### Renewable Energy Certificates (RECs) Prices")
+            rec_price_year_1_5 = st.number_input(
+                "REC Price for Year 1-5 ($/MWh)",
+                value=20.0,  # Default value; adjust as needed
+                min_value=0.0,
+                step=1
+            )
+            rec_price_year_6_10 = st.number_input(
+                "REC Price for Year 6-10 ($/MWh)",
+                value=15.0,  # Default value; adjust as needed
+                min_value=0.0,
+                step=1
+            )
+            rec_price_year_11_15 = st.number_input(
+                "REC Price for Year 11-15 ($/MWh)",
+                value=10.0,  # Default value; adjust as needed
+                min_value=0.0,
+                step=1
+            )
         
             # Rent option toggle for both construction and operating rents (now a radio button)
             rent_option = st.radio("Select Rent Calculation Method", 
@@ -533,6 +587,8 @@ def main():
         with st.sidebar.expander("Schedule", expanded=True):
             cod_date = st.date_input('Commercial Operation Date', value=datetime(2025, 12, 31), disabled=False)
             construction_start = st.date_input('Construction Start', value=datetime(2024, 12, 31), disabled=False)
+
+        
 
 
         # For other sections, inputs are disabled for 'user' type
@@ -621,7 +677,10 @@ def main():
             'other_asset_management_cost': other_asset_management_cost,
             'other_asset_management_escalation': other_asset_management_escalation,
             'discount_rate': discount_rate,
-            'state': state
+            'state': state,
+            'rec_price_year_1_5': rec_price_year_1_5,
+            'rec_price_year_6_10': rec_price_year_6_10,
+            'rec_price_year_11_15': rec_price_year_11_15,
         }
 
         if st.button('Calculate IRR'):
