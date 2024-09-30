@@ -176,22 +176,37 @@ def calculate_annual_production(project_data, year):
 
 def calculate_revenue(project_data, year, state):
     net_production = calculate_annual_production(project_data, year)
-    if year <= project_data['ppa_tenor'] + 1:
+    if year <= project_data['ppa_tenor']:
         # PPA price starts at initial rate and escalates annually
-        ppa_price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
-        revenue = net_production * ppa_price / 1000  # Convert to MWh
+        price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
     else:
         # Use merchant price from the selected state's price curve
         merchant_year = project_data['construction_start'].year + year - 1
         try:
             index = merchant_price_curves[state]['years'].index(merchant_year)
-            merchant_price = merchant_price_curves[state]['prices'][index]
+            price = merchant_price_curves[state]['prices'][index]
         except ValueError:
             # If the year is not in the merchant price curve, use the last available price
-            merchant_price = merchant_price_curves[state]['prices'][-1]
-        revenue = net_production * merchant_price / 1000
+            price = merchant_price_curves[state]['prices'][-1]
+    
+    # Get REC price based on the year
+    if year >= 1:
+        if 1 <= year <= 5:
+            rec_price = project_data['rec_price_years_1_5']
+        elif 6 <= year <= 10:
+            rec_price = project_data['rec_price_years_6_10']
+        elif 11 <= year <= 15:
+            rec_price = project_data['rec_price_years_11_15']
+        else:
+            rec_price = 0  # No REC revenue after year 15
+    else:
+        rec_price = 0  # No production in construction year
+
+    total_price = price + rec_price
+    revenue = net_production * total_price / 1000  # Convert to MWh
 
     return revenue
+
 
 
 def calculate_operating_expenses(project_data, year, rent_option):
@@ -362,6 +377,8 @@ def generate_revenue_table(project_data, rent_option, state):
             # Year 0 (Construction Year)
             net_production = 0
             price = 0
+            rec_price = 0
+            total_price = 0
             avoided_price = 0
             revenue_type = 'Construction'
             savings = 0
@@ -371,6 +388,7 @@ def generate_revenue_table(project_data, rent_option, state):
         else:
             net_production = calculate_annual_production(project_data, year)
 
+            # Determine base price (PPA or Merchant)
             if year <= project_data['ppa_tenor']:
                 # PPA term
                 price = project_data['ppa_rate'] * (1 + project_data['ppa_escalation']) ** (year - 1)
@@ -387,16 +405,31 @@ def generate_revenue_table(project_data, rent_option, state):
                 avoided_price = price  # After PPA, avoided cost price equals merchant price
                 revenue_type = 'Merchant'
 
-            # Calculate savings
-            if price != avoided_price:
-                savings = (avoided_price - price) * net_production / 1000
+            # Get REC price based on the year
+            if 1 <= year <= 5:
+                rec_price = project_data['rec_price_years_1_5']
+            elif 6 <= year <= 10:
+                rec_price = project_data['rec_price_years_6_10']
+            elif 11 <= year <= 15:
+                rec_price = project_data['rec_price_years_11_15']
             else:
-                savings = 0
+                rec_price = 0  # No REC revenue after year 15
 
-            revenue = net_production * price / 1000
+            # Adjust revenue type if REC is included
+            if rec_price > 0:
+                revenue_type += ' + REC'
+
+            # Total price including REC
+            total_price = price + rec_price
+
+            # Revenue calculation
+            revenue = net_production * total_price / 1000  # Convert kWh to MWh
+
+            # Operating Expenses
             opex = calculate_operating_expenses(project_data, year, rent_option)
             EBITDA = revenue - opex
 
+            # CapEx is zero in operating years
             capex_year = 0
 
             # Tax equity distributions
@@ -414,10 +447,13 @@ def generate_revenue_table(project_data, rent_option, state):
             tax_equity_cash_flow = te_distribution + buyout_cost
             total_cash_flow = EBITDA - capex_year + tax_equity_cash_flow
 
+            # Savings calculation (excluding REC price)
+            savings = (avoided_price - price) * net_production / 1000
+
         data.append({
             'Year': current_year,
             'Net Production (MWh)': net_production / 1000 if year > 0 else 0,
-            'Our Price ($/MWh)': price if year > 0 else 0,
+            'Our Price ($/MWh)': total_price if year > 0 else 0,
             'Avoided Cost Price ($/MWh)': avoided_price if year > 0 else 0,
             'Revenue Type': revenue_type,
             'Revenue ($)': revenue if year > 0 else 0,
@@ -503,6 +539,9 @@ def main():
             avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
             discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
             production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=False)
+            rec_price_years_1_5 = st.number_input('REC Price ($/MWh) for Years 1-5', value=20.0, min_value=0.0, disabled=False)
+            rec_price_years_6_10 = st.number_input('REC Price ($/MWh) for Years 6-10', value=15.0, min_value=0.0, disabled=False)
+            rec_price_years_11_15 = st.number_input('REC Price ($/MWh) for Years 11-15', value=10.0, min_value=0.0, disabled=False)
         
             # Rent option toggle for both construction and operating rents (now a radio button)
             rent_option = st.radio("Select Rent Calculation Method", 
@@ -621,7 +660,10 @@ def main():
             'other_asset_management_cost': other_asset_management_cost,
             'other_asset_management_escalation': other_asset_management_escalation,
             'discount_rate': discount_rate,
-            'state': state
+            'state': state,
+            'rec_price_years_1_5': rec_price_years_1_5,
+            'rec_price_years_6_10': rec_price_years_6_10,
+            'rec_price_years_11_15': rec_price_years_11_15
         }
 
         if st.button('Calculate IRR'):
