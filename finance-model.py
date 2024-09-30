@@ -666,30 +666,8 @@ def main():
             #st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
             #st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
 
-            
-            
 
-            st.subheader("Annual Project Details")
-            st.dataframe(revenue_df.style.format({
-                'Net Production (MWh)': '{:,.0f}',
-                'Our Price ($/MWh)': '${:,.2f}',
-                'Avoided Cost Price ($/MWh)': '${:,.2f}',
-                'Revenue ($)': lambda x: format_hover_value(x),
-                'Operating Expenses ($)': lambda x: format_hover_value(x),
-                'EBITDA ($)': lambda x: format_hover_value(x),
-                'Total Cash Flows ($)': lambda x: format_hover_value(x),
-                'Savings Unlocked ($)': lambda x: format_hover_value(x),
-            }))
-
-
-
-            # Calculate and display metrics
-            total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
-            total_operating_expenses = revenue_df.loc[revenue_df['Year'] == 'Total', 'Operating Expenses ($)'].values[0]
-            total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
-            total_cash_flows = revenue_df.loc[revenue_df['Year'] == 'Total', 'Total Cash Flows ($)'].values[0]
-            total_capex = calculate_capex(project_data)
-
+            # [Key Metrics Section]
             st.subheader("Key Metrics")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -707,6 +685,7 @@ def main():
             st.metric("Payback Period", f"{payback_years} years")
 
 
+            # [Total Project Metrics Section]
             st.subheader("Total Project Metrics")
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -725,7 +704,6 @@ def main():
                 st.metric("NPV", f"${NPV / 1e6:,.2f}MM")
 
 
-
             # Plot cash flows
             cash_flow_df = pd.DataFrame({
                 'Year': revenue_df['Year'][:-1],  # Exclude 'Total' row for plotting
@@ -736,20 +714,29 @@ def main():
 
             # Plot the stacked savings chart
             st.plotly_chart(plot_stacked_savings_chart(revenue_df))
-      
 
+            # Moved the Revenue Table to the bottom
+            st.subheader("Annual Project Details")
+            st.dataframe(revenue_df.style.format({
+                'Net Production (MWh)': '{:,.0f}',
+                'Our Price ($/MWh)': '${:,.2f}',
+                'Avoided Cost Price ($/MWh)': '${:,.2f}',
+                'Revenue ($)': lambda x: format_hover_value(x),
+                'Operating Expenses ($)': lambda x: format_hover_value(x),
+                'EBITDA ($)': lambda x: format_hover_value(x),
+                'Total Cash Flows ($)': lambda x: format_hover_value(x),
+                'Savings Unlocked ($)': lambda x: format_hover_value(x),
+            }))
+    
 
+        elif authentication_status == False:
+            st.error('Username/password is incorrect')
 
+            
+        elif authentication_status == None:
+            st.warning('Please enter your username and password')
 
-    elif authentication_status == False:
-        st.error('Username/password is incorrect')
-
-        
-    elif authentication_status == None:
-        st.warning('Please enter your username and password')
-
-    footer()
-
+        footer()
         
 
    
