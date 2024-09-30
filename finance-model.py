@@ -437,7 +437,6 @@ def generate_revenue_table(project_data, rent_option, state):
 
     return revenue_df
 
-# Main application function
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
     col1, col2, col3, col4 = st.columns(4)
@@ -483,12 +482,11 @@ def main():
         st.sidebar.write(f'Welcome *{name}*')
 
         # Determine user type
-        if username == 'admin':
+        if username == admin_username:
             user_type = 'admin'
         else:
             user_type = 'user'
             
-
 
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
@@ -629,91 +627,76 @@ def main():
         }
 
         if st.button('Calculate IRR'):
+            # Step 1: Calculate Cash Flows and IRR
             cash_flows, remaining_itc_cash_flows = calculate_cash_flows(project_data, rent_option, state)
             irr = calculate_irr(cash_flows)
-            st.success(f'The project IRR is: {irr*100:.2f}%')
-
-            # Generate revenue table with operating expenses and total cash flows
+            
+            # Step 2: Generate Revenue Table
             revenue_df = generate_revenue_table(project_data, rent_option, state)
 
-            # Calculate NPV
+            # Step 3: Calculate NPV
             NPV = npf.npv(discount_rate, cash_flows)
             
-            # Calculate LCOE
-            capex = calculate_capex(project_data)
-            operating_expenses_list = revenue_df.loc[revenue_df['Year'] != 'Total', 'Operating Expenses ($)'].values
-            net_production_list = revenue_df.loc[revenue_df['Year'] != 'Total', 'Net Production (MWh)'].values
-            
-            # Include CapEx in total costs list
-            total_costs_list = [capex] + operating_expenses_list.tolist()
-            # Include zero in net production list for year 0
-            net_production_list_with_zero = [0] + net_production_list.tolist()
-            
-            # Calculate discounted costs and discounted energy production
-            discounted_costs = [total_costs_list[t] / (1 + discount_rate) ** t for t in range(len(total_costs_list))]
-            discounted_energy = [net_production_list_with_zero[t] / (1 + discount_rate) ** t for t in range(len(net_production_list_with_zero))]
-            
-            NPV_costs = sum(discounted_costs)
-            NPV_energy = sum(discounted_energy)
-            
-            LCOE = NPV_costs / NPV_energy  # LCOE in $/MWh
-
-
-            # Display Tax Equity Details
-            #tax_equity = calculate_tax_equity(project_data)
-            #st.subheader("Tax Equity Details")
-            #st.write(f"**Calculated ITC Eligible CapEx:** ${tax_equity['itc'] / (project_data['itc_amount'] * project_data['itc_eligible_portion']):,.2f}")
-            #st.write(f"**Calculated ITC:** ${tax_equity['itc']:,.2f}")
-            #st.write(f"**Calculated FMV:** ${tax_equity['fmv']:,.2f}")
-
-
-
-            # Calculate and display metrics
-            total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
-            total_operating_expenses = revenue_df.loc[revenue_df['Year'] == 'Total', 'Operating Expenses ($)'].values[0]
-            total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
-            total_cash_flows = revenue_df.loc[revenue_df['Year'] == 'Total', 'Total Cash Flows ($)'].values[0]
+            # Step 4: Calculate Unlevered CapEx
             total_capex = calculate_capex(project_data)
+            tax_equity = calculate_tax_equity(project_data)
+            tax_equity_fmv = tax_equity['fmv']
+            unlevered_capex = total_capex - tax_equity_fmv
 
+            # Step 5: Calculate Saved NPV (Assuming Saved NPV is NPV without Tax Equity minus NPV with Tax Equity)
+            # To calculate NPV without Tax Equity, we need to adjust cash flows
+            # Assuming that Tax Equity affects only the initial cash flow (Year 0)
+            # Hence, we subtract tax_equity['fmv'] from Year 0 cash flow
+            cash_flows_no_tax = cash_flows.copy()
+            cash_flows_no_tax[0] += tax_equity_fmv  # Remove the effect of Tax Equity FMV
+            NPV_no_tax = npf.npv(discount_rate, cash_flows_no_tax)
+            saved_NPV = NPV_no_tax - NPV
+
+            # Step 6: Calculate Savings Notional
+            savings_notional = revenue_df.loc[revenue_df['Year'] != 'Total', 'Savings Unlocked ($)'].sum()
+
+            # Step 7: Calculate Payback Period
+            cumulative_cash_flows = np.cumsum(cash_flows)
+            payback_years = next((year for year, cum_cf in enumerate(cumulative_cash_flows) if cum_cf > 0), 'Not achieved')
+
+            # Step 8: Calculate Additional Metrics if needed
+            # (If 'Saved NPV' has a different definition, adjust accordingly)
+
+            # Display Key Metrics
             st.subheader("Key Metrics")
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
             with col1:
-                st.metric("Total CapEx", f"${total_capex / 1e6:,.0f}MM")
+                st.metric("IRR", f"{irr*100:.2f}%")
             with col2:
-                st.metric("Total Operating Expenses", f"${total_operating_expenses / 1e6:,.0f}MM")
+                total_revenue = revenue_df.loc[revenue_df['Year'] == 'Total', 'Revenue ($)'].values[0]
+                st.metric("Revenue", f"${total_revenue / 1e6:,.2f}MM")
             with col3:
-                cumulative_cash_flows = np.cumsum(cash_flows)
-                payback_years = np.argmax(cumulative_cash_flows > 0)
-            # Display Total Savings in Key Metrics
-            # Calculate total savings
-            total_savings_unlocked = revenue_df.loc[revenue_df['Year'] != 'Total', 'Savings Unlocked ($)'].sum()
-            
-
-            st.metric("Payback Period", f"{payback_years} years")
-
-
-            st.subheader("Total Project Metrics")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Revenue", f"${total_revenue / 1e6:,.0f}MM")
-            with col2:
-                st.metric("Total EBITDA", f"${total_ebitda / 1e6:,.0f}MM")
-            with col3:
-                st.metric("Total Savings Unlocked", f"${total_savings_unlocked / 1e6:,.0f}MM")
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Cash Flows", f"${total_cash_flows / 1e6:,.0f}MM")
-            with col2:
-                st.metric("Remaining ITC Cash Flows after Buyout", f"${remaining_itc_cash_flows / 1e6:,.0f}MM")
-            with col3: 
+                total_ebitda = revenue_df.loc[revenue_df['Year'] == 'Total', 'EBITDA ($)'].values[0]
+                st.metric("EBITDA", f"${total_ebitda / 1e6:,.2f}MM")
+            with col4:
+                st.metric("Unlevered CapEx", f"${unlevered_capex / 1e6:,.2f}MM")
+            with col5:
                 st.metric("NPV", f"${NPV / 1e6:,.2f}MM")
+            with col6:
+                st.metric("Saved NPV", f"${saved_NPV / 1e6:,.2f}MM")
+            with col7:
+                st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM")
+            with col8:
+                st.metric("Payback Period", f"{payback_years} years")
 
+           
+            # Step 10: Plot Cash Flows
+            cash_flow_df = pd.DataFrame({
+                'Year': revenue_df['Year'][:-1],  # Exclude 'Total' row for plotting
+                'Cash Flow': cash_flows,
+                'Cumulative Cash Flow': np.cumsum(cash_flows)
+            })
+            st.plotly_chart(plot_cash_flows(cash_flow_df))
 
-            
-            
-            
+            # Step 11: Plot Stacked Savings Chart
+            st.plotly_chart(plot_stacked_savings_chart(revenue_df))
 
+            # Step 12: Display Revenue Table at the Bottom
             st.subheader("Annual Project Details")
             st.dataframe(revenue_df.style.format({
                 'Net Production (MWh)': '{:,.0f}',
@@ -726,23 +709,14 @@ def main():
                 'Savings Unlocked ($)': lambda x: format_hover_value(x),
             }))
 
-
-
-
-            # Plot cash flows
-            cash_flow_df = pd.DataFrame({
-                'Year': revenue_df['Year'][:-1],  # Exclude 'Total' row for plotting
-                'Cash Flow': cash_flows,
-                'Cumulative Cash Flow': np.cumsum(cash_flows)
-            })
-            st.plotly_chart(plot_cash_flows(cash_flow_df))
-
-            # Plot the stacked savings chart
-            st.plotly_chart(plot_stacked_savings_chart(revenue_df))
-      
-
-
-
+            # Optional: Provide a download button for the revenue table
+            csv = revenue_df.to_csv(index=False)
+            st.download_button(
+                label="Download Revenue Table as CSV",
+                data=csv,
+                file_name='revenue_table.csv',
+                mime='text/csv',
+            )
 
     elif authentication_status == False:
         st.error('Username/password is incorrect')
@@ -752,9 +726,6 @@ def main():
         st.warning('Please enter your username and password')
 
     footer()
-
-        
-
 
    
 if __name__ == "__main__":
