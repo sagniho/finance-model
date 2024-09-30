@@ -494,12 +494,14 @@ def main():
             project_size_dc = st.number_input('Project Size (MW-dc)', value=7.5, min_value=0.1, disabled=False)
             project_size_ac = st.number_input('Project Size (MW-ac)', value=5.0, min_value=0.1, disabled=False)
             state = st.selectbox('Select State', ['NY', 'CA', 'IL', 'TX'])
-            merchant_price_start = st.number_input('Initial Merchant Price ($/MWh)', value=55.0, min_value=0.0, disabled=False)
             ppa_tenor = st.number_input('PPA Tenor (years)', value=20, min_value=1, max_value=30, disabled=False)
             post_ppa_tenor = st.number_input('Post-PPA Tenor (years)', value=16, min_value=0, max_value=30, disabled=False)
+            ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=False)
+            ppa_escalation = st.number_input('PPA Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
             itc_amount = st.number_input('ITC Amount (%)', value=30.0, min_value=0.0, max_value=100.0, disabled=False) / 100
             avoided_cost_ppa_price = st.number_input('Avoided PPA Price ($/MWh)', value=155.0, min_value=0.0, disabled=False)
             avoided_cost_escalation = st.number_input('Avoided Cost Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=False) / 100
+            discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
             production_yield = st.number_input('Production Yield (kWh/kWp)', value=1350, min_value=500, max_value=2500, disabled=False)
         
             # Rent option toggle for both construction and operating rents (now a radio button)
@@ -536,14 +538,11 @@ def main():
         # For other sections, inputs are disabled for 'user' type
         disabled_input = (user_type == 'user')
 
-        with st.sidebar.expander("Financial Parameters", expanded=False):
-            ppa_escalation = st.number_input('PPA Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            merchant_escalation_rate = st.number_input('Merchant Price Escalation (%)', value=1.5, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            opex_escalation = st.number_input('OpEx Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
-            tax_rate = st.number_input('Tax Rate (%)', value=21.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
-            developer_fee = st.number_input('Developer Fee ($/W-dc)', value=0.25, min_value=0.0, max_value=1.0, disabled=disabled_input)
+       
+            
 
         with st.sidebar.expander("OpEx Inputs", expanded=False):
+            opex_escalation = st.number_input('OpEx Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             om_cost = st.number_input('O&M Cost ($/kW/year)', value=6.00, min_value=0.0, disabled=disabled_input)
             om_escalation = st.number_input('O&M Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             asset_management_cost = st.number_input('Asset Management Cost ($/kW/year)', value=2.00, min_value=0.0, disabled=disabled_input)
@@ -554,6 +553,8 @@ def main():
             other_asset_management_cost = st.number_input('Other Asset Management Cost ($/kW/year)', value=5.00, min_value=0.0, disabled=disabled_input)
             other_asset_management_escalation = st.number_input('Other Asset Management Escalation (%)', value=2.0, min_value=0.0, max_value=10.0, disabled=disabled_input) / 100
             inverter_replacement_cost = st.number_input('Inverter Replacement Cost ($/kW/year)', value=4.00, min_value=0.0, disabled=disabled_input)
+            tax_rate = st.number_input('Tax Rate (%)', value=21.0, min_value=0.0, max_value=100.0, disabled=disabled_input) / 100
+            developer_fee = st.number_input('Developer Fee ($/W-dc)', value=0.25, min_value=0.0, max_value=1.0, disabled=disabled_input)
 
         with st.sidebar.expander("CapEx Inputs", expanded=False):
             epc_cost = st.number_input('EPC Cost ($/W-dc)', value=1.65, min_value=0.0, max_value=5.0, disabled=disabled_input)
@@ -573,9 +574,8 @@ def main():
             degradation_rate = st.number_input('Annual Degradation Rate (%)', value=0.5, min_value=0.0, max_value=5.0, disabled=disabled_input) / 100
             degradation_start_year = st.number_input('Degradation Start Year', value=1, min_value=1, disabled=disabled_input)
             ppa_escalation_start_year = st.number_input('PPA Escalation Start Year', value=2, min_value=1, disabled=disabled_input)
-            ppa_rate = st.number_input('Initial PPA Rate ($/MWh)', value=114.05, min_value=0.0, disabled=disabled_input)
-            discount_rate = st.number_input('Discount Rate for NPV and LCOE (%)', value=8.0, min_value=0.0, max_value=100.0, disabled=False) / 100
-
+            
+            
 
         # Collect project data inputs
         project_data = {
@@ -589,8 +589,6 @@ def main():
             'degradation_rate': degradation_rate,
             'ppa_rate': ppa_rate,
             'ppa_escalation': ppa_escalation,
-            'merchant_price_start': merchant_price_start,
-            'merchant_escalation_rate': merchant_escalation_rate,
             'om_escalation': om_escalation,
             'asset_management_escalation': asset_management_escalation,
             'property_tax_escalation': property_tax_escalation,
