@@ -512,7 +512,7 @@ def main():
     # Create the Authenticator object with auto_hash set to False
     authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
-    name, authentication_status, username = authenticator.login('Login', location='sidebar')
+    name, authentication_status, username = authenticator.login('main')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
