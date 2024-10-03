@@ -516,7 +516,10 @@ def main():
         cookie_expiry_days=30
     )
 
-    name, authentication_status, username = authenticator.login()
+    
+    result = authenticator.login('Login', 'main')
+    st.write(f"Authenticator login result: {result}")
+
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
