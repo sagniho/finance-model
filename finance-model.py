@@ -492,32 +492,34 @@ def main():
     user_username = st.secrets["auth"]["user_username"]
     user_password = st.secrets["auth"]["user_password"]
 
-    passwords = [admin_password, user_password]
-
-    # Corrected this line to use the 'hash()' method
-    hashed_passwords = stauth.Hasher(passwords).hash()
-    
+    # Create the credentials dictionary with plain text passwords
     credentials = {
         'usernames': {
             admin_username: {
                 'name': 'Admin User',
-                'password': hashed_passwords[0]
+                'password': admin_password
             },
             user_username: {
                 'name': 'C&I User',
-                'password': hashed_passwords[1]
+                'password': user_password
             }
         }
     }
 
+    # Pre-hash the passwords using Hasher.hash_passwords
+    hashed_credentials = stauth.Hasher.hash_passwords(credentials)
+
+    # Create the Authenticator object with auto_hash set to False
     authenticator = stauth.Authenticate(
-        credentials,
-        'some_cookie_name',
-        'some_signature_key',
-        cookie_expiry_days=30
+        hashed_credentials,
+        'your_cookie_name',      # Replace with your cookie name or use st.secrets
+        'your_signature_key',    # Replace with your signature key or use st.secrets
+        cookie_expiry_days=30,
+        auto_hash=False          # Set to False since passwords are pre-hashed
     )
 
-    name, authentication_status, username = authenticator.login('main')
+    name, authentication_status, username = authenticator.login('Login')
+
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
