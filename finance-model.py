@@ -497,12 +497,12 @@ def main():
         'usernames': {
             admin_username: {
                 'name': 'Admin User',
-                'email': 'admin@aggreko.com,
+                'email': 'admin@aggreko.com',
                 'password': admin_password
             },
             user_username: {
                 'name': 'C&I User',
-                'email': 'user@aggreko.com,
+                'email': 'user@aggreko.com',
                 'password': user_password
             }
         }
