@@ -518,8 +518,7 @@ def main():
         auto_hash=False          # Set to False since passwords are pre-hashed
     )
 
-    name, authentication_status, username = authenticator.login('Login')
-
+    name, authentication_status, username = authenticator.login('Login', location='main')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
