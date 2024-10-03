@@ -486,7 +486,6 @@ def main():
     with col3:
         st.image('logo.png', width=150)
 
-    
     # Retrieve credentials from st.secrets
     admin_username = st.secrets["auth"]["admin_username"]
     admin_password = st.secrets["auth"]["admin_password"]
@@ -494,7 +493,9 @@ def main():
     user_password = st.secrets["auth"]["user_password"]
 
     passwords = [admin_password, user_password]
-    hashed_passwords = stauth.Hasher.hash_passwords(passwords)
+
+    # Corrected this line to use the 'hash()' method
+    hashed_passwords = stauth.Hasher(passwords).hash()
     
     credentials = {
         'usernames': {
@@ -509,11 +510,14 @@ def main():
         }
     }
 
-
-    authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
+    authenticator = stauth.Authenticate(
+        credentials,
+        'some_cookie_name',
+        'some_signature_key',
+        cookie_expiry_days=30
+    )
 
     name, authentication_status, username = authenticator.login('main')
-
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
@@ -524,7 +528,6 @@ def main():
             user_type = 'admin'
         else:
             user_type = 'user'
-            
 
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
