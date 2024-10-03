@@ -477,6 +477,8 @@ def generate_revenue_table(project_data, rent_option, state):
     revenue_df = pd.concat([revenue_df, totals.to_frame().T], ignore_index=True)
 
     return revenue_df
+    
+ #flag
 
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
@@ -498,7 +500,8 @@ def main():
     usernames = [admin_username, user_username]
     passwords = [admin_password, user_password]
 
-    hashed_passwords = stauth.Hasher(passwords).generate()
+    #hashed_passwords = stauth.Hasher(passwords).hash_passwords()
+
 
     credentials = {
         'usernames': {
