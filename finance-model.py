@@ -518,15 +518,16 @@ def main():
 
     authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
-    name, authentication_status, username = authenticator.login('main')
+    # Update the login call
+    authenticator.login('main')
 
-
-    if authentication_status:
-        authenticator.logout('Logout', location='sidebar')
-        st.sidebar.write(f'Welcome *{name}*')
+    # Access authentication status from st.session_state
+    if st.session_state['authentication_status']:
+        authenticator.logout('Logout', 'sidebar')
+        st.sidebar.write(f"Welcome *{st.session_state['name']}*")
 
         # Determine user type
-        if username == admin_username:
+        if st.session_state['username'] == admin_username:
             user_type = 'admin'
         else:
             user_type = 'user'
@@ -1113,11 +1114,10 @@ def main():
                 mime='text/csv',
             )
 
-    elif authentication_status == False:
+    elif st.session_state['authentication_status'] == False:
         st.error('Username/password is incorrect')
 
-        
-    elif authentication_status == None:
+    elif st.session_state['authentication_status'] == None:
         st.warning('Please enter your username and password')
 
     footer()
