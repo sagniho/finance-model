@@ -492,29 +492,31 @@ def main():
     user_username = st.secrets["auth"]["user_username"]
     user_password = st.secrets["auth"]["user_password"]
 
-    # User Authentication
-    names = ['Admin User', 'C&I User']
-    usernames = [admin_username, user_username]
-    passwords = [admin_password, user_password]
-
-    # User Authentication
+     # User Authentication
     credentials = {
         'usernames': {
             admin_username: {
                 'name': 'Admin User',
+                'email': 'admin@aggreko.com,
                 'password': admin_password
             },
             user_username: {
                 'name': 'C&I User',
+                'email': 'user@aggreko.com,
                 'password': user_password
             }
         }
     }
 
-    authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
+    # Create the Authenticator object
+    authenticator = stauth.Authenticate(
+        credentials,
+        st.secrets["auth"]["cookie_name"],
+        st.secrets["auth"]["signature_key"],
+        cookie_expiry_days=30
+    )
 
-    name, authentication_status, username = authenticator.login('main')
-
+    name, authentication_status, username = authenticator.login('Login', 'main')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
