@@ -500,8 +500,8 @@ def main():
     usernames = [admin_username, user_username]
     passwords = [admin_password, user_password]
 
-    hashed_passwords_0 = stauth.Hasher(passwords).hash_passwords(passwords[0])
-    hashed_passwords_1 = stauth.Hasher(passwords).hash_passwords(passwords[1])
+    hashed_passwords_0 = stauth.Hasher.hash(passwords[0])
+    hashed_passwords_1 = stauth.Hasher.hash(passwords[1])
 
     credentials = {
         'usernames': {
