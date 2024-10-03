@@ -486,39 +486,36 @@ def main():
     with col3:
         st.image('logo.png', width=150)
 
+    
     # Retrieve credentials from st.secrets
     admin_username = st.secrets["auth"]["admin_username"]
     admin_password = st.secrets["auth"]["admin_password"]
     user_username = st.secrets["auth"]["user_username"]
     user_password = st.secrets["auth"]["user_password"]
 
-     # User Authentication
+    # User Authentication
+    names = ['Admin User', 'C&I User']
+    usernames = [admin_username, user_username]
+    passwords = [admin_password, user_password]
+
+    hashed_passwords = stauth.Hasher(passwords).generate()
+
     credentials = {
         'usernames': {
             admin_username: {
                 'name': 'Admin User',
-                'email': 'admin@aggreko.com',
-                'password': admin_password
+                'password': hashed_passwords[0]
             },
             user_username: {
                 'name': 'C&I User',
-                'email': 'user@aggreko.com',
-                'password': user_password
+                'password': hashed_passwords[1]
             }
         }
     }
 
-    # Create the Authenticator object
-    authenticator = stauth.Authenticate(
-        credentials,
-        'some_cookie_name',  # Replace with your cookie name or use st.secrets
-        'some_signature_key',
-        cookie_expiry_days=30
-    )
+    authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
-    
-    result = authenticator.login('Login', 'main')
-    st.write(f"Authenticator login result: {result}")
+    name, authentication_status, username = authenticator.login('main')
 
 
     if authentication_status:
@@ -530,6 +527,7 @@ def main():
             user_type = 'admin'
         else:
             user_type = 'user'
+            
 
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
