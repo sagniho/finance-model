@@ -492,7 +492,12 @@ def main():
     user_username = st.secrets["auth"]["user_username"]
     user_password = st.secrets["auth"]["user_password"]
 
-    # Create the credentials dictionary with plain text passwords
+    # User Authentication
+    names = ['Admin User', 'C&I User']
+    usernames = [admin_username, user_username]
+    passwords = [admin_password, user_password]
+
+    # User Authentication
     credentials = {
         'usernames': {
             admin_username: {
@@ -506,16 +511,13 @@ def main():
         }
     }
 
-    # Pre-hash the passwords using Hasher.hash_passwords
-    hashed_credentials = stauth.Hasher.hash_passwords(credentials)
-
-    # Create the Authenticator object with auto_hash set to False
     authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
     name, authentication_status, username = authenticator.login('main')
 
+
     if authentication_status:
-        authenticator.logout('sidebar')
+        authenticator.logout('Logout', location='sidebar')
         st.sidebar.write(f'Welcome *{name}*')
 
         # Determine user type
