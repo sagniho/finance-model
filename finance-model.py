@@ -516,7 +516,7 @@ def main():
         cookie_expiry_days=30
     )
 
-    name, authentication_status, username = authenticator.login('Login', 'main')
+    name, authentication_status, username = authenticator.login('main')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
