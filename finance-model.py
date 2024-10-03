@@ -498,7 +498,7 @@ def main():
     usernames = [admin_username, user_username]
     passwords = [admin_password, user_password]
 
-    hashed_passwords = stauth.Hasher(passwords).generate()
+    hashed_passwords = stauth.Hasher.hash_passwords(passwords)
 
     credentials = {
         'usernames': {
