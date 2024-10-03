@@ -512,7 +512,7 @@ def main():
             },
             user_username: {
                 'name': 'C&I User',
-                'email': "user@aggreko.com',
+                'email': 'user@aggreko.com',
                 'password': hashed_passwords_1
             }
         }
