@@ -511,8 +511,8 @@ def main():
     # Create the Authenticator object
     authenticator = stauth.Authenticate(
         credentials,
-        st.secrets["auth"]["cookie_name"],
-        st.secrets["auth"]["signature_key"],
+        'some_cookie_name',  # Replace with your cookie name or use st.secrets
+        'some_signature_key',
         cookie_expiry_days=30
     )
 
