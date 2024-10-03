@@ -507,10 +507,12 @@ def main():
         'usernames': {
             admin_username: {
                 'name': 'Admin User',
+                'email': 'admin@aggreko.com',
                 'password': hashed_passwords_0
             },
             user_username: {
                 'name': 'C&I User',
+                'email': "user@aggreko.com',
                 'password': hashed_passwords_1
             }
         }
