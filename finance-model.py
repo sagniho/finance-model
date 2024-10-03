@@ -503,17 +503,20 @@ def main():
     hashed_passwords = stauth.Hasher.hash_passwords(passwords)
     
     credentials = {
-        'usernames': {
-            admin_username: {
-                'name': 'Admin User',
-                'password': hashed_passwords[0]
-            },
-            user_username: {
-                'name': 'C&I User',
-                'password': hashed_passwords[1]
-            }
+    'usernames': {
+        admin_username: {
+            'name': 'Admin User',
+            'password': admin_password
+        },
+        user_username: {
+            'name': 'C&I User',
+            'password': user_password
         }
     }
+}
+
+
+
 
 
     authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
