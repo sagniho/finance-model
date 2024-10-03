@@ -510,15 +510,9 @@ def main():
     hashed_credentials = stauth.Hasher.hash_passwords(credentials)
 
     # Create the Authenticator object with auto_hash set to False
-    authenticator = stauth.Authenticate(
-        hashed_credentials,
-        'your_cookie_name',      # Replace with your cookie name or use st.secrets
-        'your_signature_key',    # Replace with your signature key or use st.secrets
-        cookie_expiry_days=30,
-        auto_hash=False          # Set to False since passwords are pre-hashed
-    )
+    authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
-    name, authentication_status, username = authenticator.login('Login', location='main')
+    name, authentication_status, username = authenticator.login('Login')
 
     if authentication_status:
         authenticator.logout('Logout', location='sidebar')
