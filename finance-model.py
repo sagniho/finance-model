@@ -493,13 +493,15 @@ def main():
     user_username = st.secrets["auth"]["user_username"]
     user_password = st.secrets["auth"]["user_password"]
 
+
+
+    
     # User Authentication
     names = ['Admin User', 'C&I User']
     usernames = [admin_username, user_username]
     passwords = [admin_password, user_password]
-
     hashed_passwords = stauth.Hasher.hash_passwords(passwords)
-
+    
     credentials = {
         'usernames': {
             admin_username: {
@@ -512,6 +514,7 @@ def main():
             }
         }
     }
+
 
     authenticator = stauth.Authenticate(credentials, 'some_cookie_name', 'some_signature_key', cookie_expiry_days=30)
 
