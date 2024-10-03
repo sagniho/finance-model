@@ -515,7 +515,7 @@ def main():
     name, authentication_status, username = authenticator.login('main')
 
     if authentication_status:
-        authenticator.logout('Logout', location='sidebar')
+        authenticator.logout('sidebar')
         st.sidebar.write(f'Welcome *{name}*')
 
         # Determine user type
