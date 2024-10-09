@@ -72,6 +72,16 @@ def footer():
     ]
     layout(*myargs)
 
+# Update state emissions factors (lbs CO₂ per MWh)
+state_emissions_factors = {
+    'NY': 515,   # lbs CO₂ per MWh
+    'CA': 531,
+    'IL': 1149,
+    'TX': 1135,
+    'NJ': 750
+}
+
+
 
 merchant_price_curves = {
     'NY': {
@@ -101,6 +111,45 @@ merchant_price_curves = {
         'prices': [58 + i * 0.35 for i in range(47)]  # Sample escalating prices
     }
 }
+
+
+def calculate_carbon_offsets(revenue_df, project_data):
+    # Sum total net production over the project lifetime (in MWh)
+    total_net_production_mwh = revenue_df.loc[revenue_df['Year'] != 'Total', 'Net Production (MWh)'].sum()
+    
+    # Get emissions factor based on the state (lbs CO₂ per MWh)
+    state = project_data['state']
+    emissions_factor_lbs_per_mwh = state_emissions_factors.get(state, 1000)  # Default to 1000 if state not found
+    
+    # Total CO₂ emissions avoided (in pounds)
+    total_co2_avoided_lbs = total_net_production_mwh * emissions_factor_lbs_per_mwh
+    
+    # Convert pounds to metric tons (1 metric ton = 2204.62 pounds)
+    total_co2_avoided_metric_tons = total_co2_avoided_lbs / 2204.62
+    
+    # Trees planted: A mature tree absorbs about 48 pounds of CO₂ per year
+    co2_absorption_per_tree_per_year_lbs = 48
+    equivalent_trees = total_co2_avoided_lbs / co2_absorption_per_tree_per_year_lbs
+    
+    # Cars taken off the road: Average car emits about 4.6 metric tons CO₂ per year
+    co2_emissions_per_car_per_year_metric_tons = 4.6
+    equivalent_cars = total_co2_avoided_metric_tons / co2_emissions_per_car_per_year_metric_tons
+    
+    # Households powered for a year
+    avg_household_consumption_mwh_per_year = 10.715  # MWh per year
+    equivalent_households = total_net_production_mwh / avg_household_consumption_mwh_per_year
+    
+    # Miles not driven
+    co2_emissions_per_mile_lbs = 0.89  # lbs CO₂ per mile
+    equivalent_miles = total_co2_avoided_lbs / co2_emissions_per_mile_lbs
+    
+    return {
+        'total_co2_avoided_metric_tons': total_co2_avoided_metric_tons,
+        'equivalent_trees': equivalent_trees,
+        'equivalent_cars': equivalent_cars,
+        'equivalent_households': equivalent_households,
+        'equivalent_miles': equivalent_miles
+    }
 
 
 def format_hover_value(value):
@@ -1096,6 +1145,8 @@ def main():
             revenue_df = generate_revenue_table(project_data, rent_option, state)
             # After generating revenue_df
             lcoe = calculate_lcoe(project_data, discount_rate, revenue_df)
+            carbon_offsets = calculate_carbon_offsets(revenue_df, project_data)
+
 
 
             # Step 3: Calculate NPV
@@ -1157,6 +1208,44 @@ def main():
            
 
             st.divider()
+
+            # Environmental Impact Section
+            st.subheader("Environmental Impact")
+            
+            col_env1, col_env2, col_env3 = st.columns(3)
+            with col_env1:
+                st.metric(
+                    "Total CO₂ Avoided",
+                    f"{carbon_offsets['total_co2_avoided_metric_tons']:,.2f} metric tons",
+                    help="Total CO₂ emissions avoided over the project lifetime."
+                )
+            with col_env2:
+                st.metric(
+                    "Equivalent Trees Planted",
+                    f"{int(carbon_offsets['equivalent_trees']):,}",
+                    help="Equivalent number of mature trees needed to absorb the same amount of CO₂."
+                )
+            with col_env3:
+                st.metric(
+                    "Equivalent Cars Off the Road",
+                    f"{carbon_offsets['equivalent_cars']:.2f}",
+                    help="Equivalent number of cars taken off the road for one year."
+                )
+            
+            col_env4, col_env5 = st.columns(2)
+            with col_env4:
+                st.metric(
+                    "Households Powered for a Year",
+                    f"{int(carbon_offsets['equivalent_households']):,}",
+                    help="Equivalent number of households powered for one year."
+                )
+            with col_env5:
+                st.metric(
+                    "Miles Not Driven",
+                    f"{int(carbon_offsets['equivalent_miles']):,} miles",
+                    help="Equivalent miles not driven by an average passenger vehicle."
+                )
+
 
 
              # Step 12: Display Revenue Table at the Bottom
