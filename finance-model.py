@@ -1225,39 +1225,44 @@ def main():
             st.divider()
             
 
+            st.subheader("Environmental Impact")
+            
+            # First row of metrics
             col_env1, col_env2, col_env3 = st.columns(3)
             with col_env1:
                 st.metric(
-                    "Total CO₂ Avoided",
-                    f"{format_number(carbon_offsets['total_co2_avoided_metric_tons'])} metric tons",
+                    label="Total CO₂ Avoided",
+                    value=f"{carbon_offsets['total_co2_avoided_metric_tons']:,.2f} metric tons",
                     help="Total CO₂ emissions avoided over the project lifetime."
                 )
             with col_env2:
                 st.metric(
-                    "Equivalent Trees Planted",
-                    f"{format_number(carbon_offsets['equivalent_trees'])}",
+                    label="Equivalent Trees Planted",
+                    value=f"{int(carbon_offsets['equivalent_trees']):,}",
                     help="Equivalent number of mature trees needed to absorb the same amount of CO₂."
                 )
             with col_env3:
                 st.metric(
-                    "Equivalent Cars Off the Road",
-                    f"{format_number(carbon_offsets['equivalent_cars'])}",
+                    label="Equivalent Cars Off the Road",
+                    value=f"{carbon_offsets['equivalent_cars']:,.2f}",
                     help="Equivalent number of cars taken off the road for one year."
                 )
             
-            col_env4, col_env5, col_env6 = st.columns(3)
+            # Second row of metrics
+            col_env4, col_env5m col_env6 = st.columns(3)
             with col_env4:
                 st.metric(
-                    "Households Powered for a Year",
-                    f"{format_number(carbon_offsets['equivalent_households'])}",
+                    label="Households Powered for a Year",
+                    value=f"{int(carbon_offsets['equivalent_households']):,}",
                     help="Equivalent number of households powered for one year."
                 )
             with col_env5:
                 st.metric(
-                    "Miles Not Driven",
-                    f"{format_number(carbon_offsets['equivalent_miles'])} miles",
+                    label="Miles Not Driven",
+                    value=f"{int(carbon_offsets['equivalent_miles']):,} miles",
                     help="Equivalent miles not driven by an average passenger vehicle."
                 )
+
 
             st.divider()
 
