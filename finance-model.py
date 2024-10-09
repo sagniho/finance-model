@@ -1151,7 +1151,7 @@ def main():
             with col8:
                 st.metric("Payback Period", f"{payback_years} years", help='Number of years to recover the initial investment.')
             
-           col9, col10, col11, col12 = st.columns(4)
+            col9, col10, col11, col12 = st.columns(4)
             with col9:
                 st.metric("LCOE ($/MWh)", f"${lcoe:,.2f}", help='Levelized Cost of Energy.')
            
