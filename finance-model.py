@@ -210,6 +210,9 @@ def calculate_revenue(project_data, year, state):
     total_price = price + rec_price
     revenue = net_production * total_price / 1000  # Convert to MWh
 
+    if year == 1:
+        revenue += project_data['incentive_amount']
+
     return revenue
 
 
@@ -429,6 +432,9 @@ def generate_revenue_table(project_data, rent_option, state):
 
             # Revenue calculation
             revenue = net_production * total_price / 1000  # Convert kWh to MWh
+            # Add incentive amount at COD (Year 1)
+            if year == 1:
+                revenue += project_data['incentive_amount']
 
             # Operating Expenses
             opex = calculate_operating_expenses(project_data, year, rent_option)
@@ -479,6 +485,31 @@ def generate_revenue_table(project_data, rent_option, state):
     return revenue_df
     
  #flag
+
+def calculate_lcoe(project_data, discount_rate, revenue_df):
+    npv_costs = 0
+    npv_production = 0
+    for index, row in revenue_df.iterrows():
+        if row['Year'] == 'Total':
+            continue
+        year = row['Year'] - project_data['construction_start'].year
+        discount_factor = (1 + discount_rate) ** year
+        # Costs include operating expenses
+        opex = row['Operating Expenses ($)']
+        # Add capex in year 0
+        if year == 0:
+            capex = calculate_capex(project_data)
+            total_cost = capex + opex
+        else:
+            total_cost = opex
+        npv_costs += total_cost / discount_factor
+        # Net production in MWh
+        net_production = row['Net Production (MWh)']
+        npv_production += net_production / discount_factor
+    # Now calculate LCOE
+    lcoe = npv_costs / npv_production  # $/MWh
+    return lcoe
+
 
 def main():
     st.set_page_config(page_title='C&I PPA Model', page_icon='a.png', layout='wide')
@@ -559,6 +590,35 @@ def main():
                 ['NY', 'CA', 'IL', 'TX'],
                 help='Select the state where the project is located.'
             )
+            project_type = st.radio(
+            "Project Type",
+            options=["Ground", "Rooftop"],
+            index=0,
+            help="Select whether the project is ground-mounted or rooftop."
+            )
+
+            # Compute EPC cost per W-dc based on project type and size
+            if project_type == 'Ground':
+                if 0.5 <= project_size_dc <= 1.0:
+                    epc_cost = 1.75
+                elif 1.0 <= project_size_dc <= 5.0:
+                    epc_cost = 1.50
+                else:
+                    epc_cost = 1.65  # Default EPC cost for sizes outside specified ranges
+            elif project_type == 'Rooftop':
+                if 0.5 <= project_size_dc <= 1.0:
+                    epc_cost = 2.00
+                elif 1.0 <= project_size_dc <= 5.0:
+                    epc_cost = 1.75
+                else:
+                    epc_cost = 1.65  # Default EPC cost for sizes outside specified ranges
+            else:
+                epc_cost = 1.65  # Default EPC cost
+            
+            # Developer fee is always 10% of EPC cost
+            developer_fee = epc_cost * 0.10
+
+       
             # PPA Inputs
             ppa_tenor = st.number_input(
                 'PPA Tenor (years)',
@@ -629,6 +689,13 @@ def main():
                 max_value=2500,
                 disabled=False,
                 help='Enter the annual energy production per kWp installed capacity.'
+            )
+            incentive_amount = st.number_input(
+                'Incentive Amount ($)',
+                value=0.0,
+                min_value=0.0,
+                disabled=False,
+                help='Enter the flat incentive amount received at COD.'
             )
             # REC Price Inputs
             rec_price_years_1_5 = st.number_input(
@@ -853,20 +920,13 @@ def main():
                 disabled=disabled_input,
                 help='Enter the applicable tax rate.'
             ) / 100
-            developer_fee = st.number_input(
-                'Developer Fee ($/W-dc)',
-                value=0.25,
-                min_value=0.0,
-                max_value=1.0,
-                disabled=disabled_input,
-                help='Enter the developer fee per W-dc.'
-            )
+
 
         with st.sidebar.expander("CapEx Inputs", expanded=False):
             # Capital Expenditure Inputs
             epc_cost = st.number_input(
                 'EPC Cost ($/W-dc)',
-                value=1.65,
+                value=epc_cost,
                 min_value=0.0,
                 max_value=5.0,
                 disabled=disabled_input,
@@ -887,6 +947,14 @@ def main():
                 max_value=1.0,
                 disabled=disabled_input,
                 help='Enter any additional transaction costs per W-dc.'
+            )
+             developer_fee = st.number_input(
+                'Developer Fee ($/W-dc)',
+                value=developer_fee,
+                min_value=0.0,
+                max_value=5.0,
+                disabled=disabled_input,
+                help='Enter the developer fee per W-dc.'
             )
 
         with st.sidebar.expander("Tax Equity Inputs", expanded=False):
@@ -969,6 +1037,8 @@ def main():
         project_data = {
             'project_size_dc': project_size_dc,
             'project_size_ac': project_size_ac,
+            'epc_cost': epc_cost,
+            'developer_fee': developer_fee,
             'site_acres': site_acres,
             'construction_rent': construction_rent,
             'operating_rent': operating_rent,
@@ -1012,7 +1082,8 @@ def main():
             'state': state,
             'rec_price_years_1_5': rec_price_years_1_5,
             'rec_price_years_6_10': rec_price_years_6_10,
-            'rec_price_years_11_15': rec_price_years_11_15
+            'rec_price_years_11_15': rec_price_years_11_15,
+            'incentive_amount': incentive_amount
         }
 
         if st.button('Calculate IRR'):
@@ -1023,6 +1094,9 @@ def main():
             
             # Step 2: Generate Revenue Table
             revenue_df = generate_revenue_table(project_data, rent_option, state)
+            # After generating revenue_df
+            lcoe = calculate_lcoe(project_data, discount_rate, revenue_df)
+
 
             # Step 3: Calculate NPV
             NPV = npf.npv(discount_rate, cash_flows)
@@ -1076,6 +1150,11 @@ def main():
                 st.metric("Savings Notional", f"${savings_notional / 1e6:,.2f}MM", help='Total savings unlocked for the customer.')
             with col8:
                 st.metric("Payback Period", f"{payback_years} years", help='Number of years to recover the initial investment.')
+            
+           col9, col10, col11, col12 = st.columns(4)
+            with col9:
+                st.metric("LCOE ($/MWh)", f"${lcoe:,.2f}", help='Levelized Cost of Energy.')
+           
 
             st.divider()
 
