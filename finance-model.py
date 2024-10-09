@@ -1249,7 +1249,7 @@ def main():
                 )
             
             # Second row of metrics
-            col_env4, col_env5m col_env6 = st.columns(3)
+            col_env4, col_env5, col_env6 = st.columns(3)
             with col_env4:
                 st.metric(
                     label="Households Powered for a Year",
