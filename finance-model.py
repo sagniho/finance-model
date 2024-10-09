@@ -178,15 +178,6 @@ def calculate_annual_production(project_data, year):
     net_production = initial_production * degradation_factor
     return net_production
 
-def calculate_developer_fee(epc_cost):
-    return epc_cost * 0.10
-
-def calculate_lcoe(capex, total_production, discount_rate, lifetime_years):
-    npv_cost = npf.npv(discount_rate, [capex] + [0] * (lifetime_years - 1))
-    npv_production = npf.npv(discount_rate, [0] + [total_production] * lifetime_years)
-    return npv_cost / npv_production
-
-
 def calculate_revenue(project_data, year, state):
     net_production = calculate_annual_production(project_data, year)
     if year <= project_data['ppa_tenor']:
@@ -547,7 +538,6 @@ def main():
         st.sidebar.header('Project Inputs')
         with st.sidebar.expander("Project Specifications", expanded=True):
             # Inputs always enabled for this section
-            project_type = st.selectbox('Select Project Type', ['ground', 'roof'], help='Select whether the project is ground or rooftop. This affects the EPC cost.')
 
             # Project Size Inputs
             project_size_dc = st.number_input(
@@ -771,43 +761,8 @@ def main():
         # For other sections, inputs are disabled for 'user' type
         disabled_input = (user_type == 'user')
 
-        with st.sidebar.expander("CapEx and OpEx Inputs", expanded=False):
-            st.write("### Capital Expenditure Inputs")
-            epc_cost = st.number_input(
-                'EPC Cost ($/W-dc)',
-                value=calculate_epc_cost(project_data),
-                min_value=0.0,
-                max_value=5.0,
-                help='Enter the Engineering, Procurement, and Construction cost per W-dc.'
-            )
-            interconnection_cost = st.number_input(
-                'Interconnection Cost ($/W-dc)',
-                value=0.10,
-                min_value=0.0,
-                max_value=1.0,
-                disabled=disabled_input,
-                help='Enter the interconnection cost per W-dc.'
-            )
-            transaction_costs = st.number_input(
-                'Transaction Costs ($/W-dc)',
-                value=0.07,
-                min_value=0.0,
-                max_value=1.0,
-                disabled=disabled_input,
-                help='Enter any additional transaction costs per W-dc.'
-            )
-
-            
-            
+        with st.sidebar.expander("OpEx Inputs", expanded=False):
             # Operating Expenses Inputs
-            st.write("### Operating Expense Inputs")
-            developer_fee = st.number_input(
-                'Developer Fee ($/W-dc)',
-                value=calculate_developer_fee(epc_cost),
-                min_value=0.0,
-                max_value=1.0,
-                help='Enter the developer fee per W-dc.'
-            )
             opex_escalation = st.number_input(
                 'OpEx Escalation (%)',
                 value=2.0,
@@ -907,7 +862,32 @@ def main():
                 help='Enter the developer fee per W-dc.'
             )
 
-  
+        with st.sidebar.expander("CapEx Inputs", expanded=False):
+            # Capital Expenditure Inputs
+            epc_cost = st.number_input(
+                'EPC Cost ($/W-dc)',
+                value=1.65,
+                min_value=0.0,
+                max_value=5.0,
+                disabled=disabled_input,
+                help='Enter the Engineering, Procurement, and Construction cost per W-dc.'
+            )
+            interconnection_cost = st.number_input(
+                'Interconnection Cost ($/W-dc)',
+                value=0.10,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=disabled_input,
+                help='Enter the interconnection cost per W-dc.'
+            )
+            transaction_costs = st.number_input(
+                'Transaction Costs ($/W-dc)',
+                value=0.07,
+                min_value=0.0,
+                max_value=1.0,
+                disabled=disabled_input,
+                help='Enter any additional transaction costs per W-dc.'
+            )
 
         with st.sidebar.expander("Tax Equity Inputs", expanded=False):
             # Tax Equity Financing Inputs
@@ -987,7 +967,6 @@ def main():
 
         # Collect project data inputs
         project_data = {
-            'project_type': project_type,
             'project_size_dc': project_size_dc,
             'project_size_ac': project_size_ac,
             'site_acres': site_acres,
