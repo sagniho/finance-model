@@ -1232,7 +1232,7 @@ def main():
                     help="Equivalent number of cars taken off the road for one year."
                 )
             
-            col_env4, col_env5 = st.columns(2)
+            col_env4, col_env5, col_env6 = st.columns(3)
             with col_env4:
                 st.metric(
                     "Households Powered for a Year",
