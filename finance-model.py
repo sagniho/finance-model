@@ -800,10 +800,7 @@ def main():
             
             
             # Operating Expenses Inputs
-            st.write("### Operatingdef calculate_lcoe(capex, total_production, discount_rate, lifetime_years):
-    npv_cost = npf.npv(discount_rate, [capex] + [0] * (lifetime_years - 1))
-    npv_production = npf.npv(discount_rate, [0] + [total_production] * lifetime_years)
-    return npv_cost / npv_production Expenditure Inputs")
+            st.write("### Operating Expense Inputs")
             developer_fee = st.number_input(
                 'Developer Fee ($/W-dc)',
                 value=calculate_developer_fee(epc_cost),
