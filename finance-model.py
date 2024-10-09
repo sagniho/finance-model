@@ -587,7 +587,7 @@ def main():
             )
             state = st.selectbox(
                 'Select State',
-                ['NY', 'CA', 'IL', 'TX'],
+                ['NY', 'CA', 'IL', 'TX', 'NJ'],
                 help='Select the state where the project is located.'
             )
             project_type = st.radio(
