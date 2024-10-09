@@ -701,14 +701,14 @@ def main():
                 help='Enter the number of years after the PPA term.'
             )
             ppa_rate = st.number_input(
-                'Initial PPA Rate ($/MWh)',
+                'Our PPA Rate ($/MWh)',
                 value=114.05,
                 min_value=0.0,
                 disabled=False,
                 help='Enter the starting price per MWh for the PPA.'
             )
             ppa_escalation = st.number_input(
-                'PPA Escalation (%)',
+                'Our PPA Escalation (%)',
                 value=2.0,
                 min_value=0.0,
                 max_value=10.0,
@@ -724,14 +724,14 @@ def main():
                 help='Enter the Investment Tax Credit percentage available for the project.'
             ) / 100
             avoided_cost_ppa_price = st.number_input(
-                'Avoided PPA Price ($/MWh)',
+                'Avoided Grid Price ($/MWh)',
                 value=155.0,
                 min_value=0.0,
                 disabled=False,
                 help='Enter the avoided cost price per MWh during the PPA term.'
             )
             avoided_cost_escalation = st.number_input(
-                'Avoided Cost Escalation (%)',
+                'Avoided Grid Escalation (%)',
                 value=2.0,
                 min_value=0.0,
                 max_value=10.0,
