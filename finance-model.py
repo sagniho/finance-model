@@ -948,7 +948,7 @@ def main():
                 disabled=disabled_input,
                 help='Enter any additional transaction costs per W-dc.'
             )
-             developer_fee = st.number_input(
+            developer_fee = st.number_input(
                 'Developer Fee ($/W-dc)',
                 value=developer_fee,
                 min_value=0.0,
